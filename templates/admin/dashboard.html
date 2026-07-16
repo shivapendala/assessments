@@ -1,0 +1,223 @@
+{% extends "base.html" %}
+{% block title %}Admin Dashboard{% endblock %}
+{% block body_class %}admin-page{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+
+  <!-- ── Sidebar ─────────────────────────────────────────────── -->
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon-sm">
+        <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" />
+      </div>
+      <span class="sidebar-brand">ElevateIQ</span>
+    </div>
+
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-item active" id="nav-dashboard">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="{{ url_for('admin.assessments') }}" class="nav-item" id="nav-assessments">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Assessments
+      </a>
+      <a href="{{ url_for('admin.results') }}" class="nav-item" id="nav-results">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Results
+      </a>
+    </nav>
+
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="admin-avatar">{{ current_user.email[0].upper() }}</div>
+        <div class="admin-details">
+          <span class="admin-email">{{ current_user.email }}</span>
+          <span class="admin-role">Administrator</span>
+        </div>
+      </div>
+      <a href="{{ url_for('admin.logout') }}" class="btn-logout" title="Logout">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/>
+          <polyline points="16 17 21 12 16 7"/>
+          <line x1="21" y1="12" x2="9" y2="12"/>
+        </svg>
+      </a>
+    </div>
+  </aside>
+
+  <!-- ── Main Content ─────────────────────────────────────────── -->
+  <main class="admin-main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Dashboard</h1>
+        <p class="page-sub">Overview of recruitment drive activity</p>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('admin.assessments') }}" class="btn btn-primary">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+          New Assessment
+        </a>
+      </div>
+    </header>
+
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-violet">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Total Candidates</span>
+          <span class="stat-value">{{ stats.total_candidates }}</span>
+        </div>
+      </div>
+
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-blue">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Total Assessments</span>
+          <span class="stat-value">{{ stats.total_assessments }}</span>
+          <span class="stat-badge badge-active">{{ stats.active_assessments }} active</span>
+        </div>
+      </div>
+
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-amber">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Total Attempts</span>
+          <span class="stat-value">{{ stats.total_attempts }}</span>
+          {% if stats.in_progress > 0 %}
+          <span class="stat-badge badge-warning">{{ stats.in_progress }} in progress</span>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-emerald">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Passed</span>
+          <span class="stat-value stat-pass">{{ stats.passed }}</span>
+          <span class="stat-badge badge-pass">{{ stats.pass_rate }}% pass rate</span>
+        </div>
+      </div>
+
+      <div class="stat-card glass-card">
+        <div class="stat-icon stat-red">
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+        </div>
+        <div class="stat-body">
+          <span class="stat-label">Failed</span>
+          <span class="stat-value stat-fail">{{ stats.failed }}</span>
+        </div>
+      </div>
+    </div>
+
+    <!-- Recent Results + Active Assessment -->
+    <div class="dashboard-grid" style="grid-template-columns: 1fr 1.25fr 1.25fr;">
+      <!-- Active Assessments -->
+      <div class="glass-card panel">
+        <div class="panel-header">
+          <h2 class="panel-title">Assessments</h2>
+          <a href="{{ url_for('admin.assessments') }}" class="panel-link">View All</a>
+        </div>
+        <div class="panel-body">
+          {% if assessments %}
+          <div class="assessment-list">
+            {% for a in assessments[:5] %}
+            <div class="assessment-row">
+              <div class="ar-info">
+                <span class="ar-title">{{ a.title }}</span>
+                <span class="ar-meta">{{ a.question_count }} questions · {{ a.duration }} min</span>
+              </div>
+              <div class="ar-right">
+                <span class="badge {% if a.status == 'active' %}badge-active{% else %}badge-inactive{% endif %}">
+                  {{ a.status | title }}
+                </span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <p>No assessments yet. <a href="{{ url_for('admin.assessments') }}">Create one</a>.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Passed Candidates -->
+      <div class="glass-card panel" style="border-top: 3px solid var(--emerald-dark);">
+        <div class="panel-header">
+          <h2 class="panel-title" style="color: var(--emerald-dark);">Passed Candidates 🟢</h2>
+          <a href="{{ url_for('admin.results') }}" class="panel-link">View All</a>
+        </div>
+        <div class="panel-body">
+          {% if passed_results %}
+          <div class="recent-results">
+            {% for sub in passed_results %}
+            <div class="result-row" style="border-bottom: 1px solid var(--bg-tertiary); padding: 8px 0; display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <div class="rr-avatar" style="background: var(--emerald-faint); color: var(--emerald-dark);">{{ sub.candidate.full_name[0].upper() }}</div>
+                <div class="rr-info">
+                  <span class="rr-name" style="font-weight: 600;">{{ sub.candidate.full_name }}</span>
+                  <span class="rr-ht" style="display: block; font-size: 11px; color: var(--text-muted);">{{ sub.candidate.hall_ticket }}</span>
+                </div>
+              </div>
+              <div class="rr-score" style="text-align: right;">
+                <span class="rr-pct" style="font-weight: 700; color: var(--emerald-dark);">{{ "%.1f"|format(sub.percentage) }}%</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <p>No passed candidates yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Failed Candidates -->
+      <div class="glass-card panel" style="border-top: 3px solid var(--danger);">
+        <div class="panel-header">
+          <h2 class="panel-title" style="color: var(--danger);">Failed Candidates 🔴</h2>
+          <a href="{{ url_for('admin.results') }}" class="panel-link">View All</a>
+        </div>
+        <div class="panel-body">
+          {% if failed_results %}
+          <div class="recent-results">
+            {% for sub in failed_results %}
+            <div class="result-row" style="border-bottom: 1px solid var(--bg-tertiary); padding: 8px 0; display: flex; align-items: center; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: var(--space-2);">
+                <div class="rr-avatar" style="background: var(--danger-faint); color: var(--danger);">{{ sub.candidate.full_name[0].upper() }}</div>
+                <div class="rr-info">
+                  <span class="rr-name" style="font-weight: 600;">{{ sub.candidate.full_name }}</span>
+                  <span class="rr-ht" style="display: block; font-size: 11px; color: var(--text-muted);">{{ sub.candidate.hall_ticket }}</span>
+                </div>
+              </div>
+              <div class="rr-score" style="text-align: right;">
+                <span class="rr-pct" style="font-weight: 700; color: var(--danger);">{{ "%.1f"|format(sub.percentage) }}%</span>
+              </div>
+            </div>
+            {% endfor %}
+          </div>
+          {% else %}
+          <div class="empty-state">
+            <p>No failed candidates yet.</p>
+          </div>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+
+  </main>
+</div>
+{% endblock %}

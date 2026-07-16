@@ -1,0 +1,102 @@
+"""
+ElevateIQ — Configuration Module
+Supports Development, Testing, and Production environments.
+"""
+import os
+import ssl
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Build SQLALCHEMY_ENGINE_OPTIONS dynamically to support SSL context for pg8000
+db_url = os.environ.get('DATABASE_URL', '')
+engine_options = {
+    'pool_size': 10,
+    'max_overflow': 20,
+    'pool_timeout': 30,
+    'pool_recycle': 1800,
+    'pool_pre_ping': True,
+}
+if db_url and ('postgres' in db_url or 'pg8000' in db_url):
+    context = ssl.create_default_context()
+    context.check_hostname = False
+    context.verify_mode = ssl.CERT_NONE
+    engine_options['connect_args'] = {'ssl_context': context}
+
+
+class Config:
+    """Base configuration shared by all environments."""
+    SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False
+    WTF_CSRF_ENABLED = True
+    WTF_CSRF_TIME_LIMIT = 7200  # 2 hours
+
+    # Session security
+    SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'
+    SESSION_COOKIE_HTTPONLY = True
+    SESSION_COOKIE_SAMESITE = 'Lax'
+    PERMANENT_SESSION_LIFETIME = 7200  # 2 hours
+
+    # SQLAlchemy connection pool tuning (handles 100 concurrent users)
+    # Note: overridden in DevelopmentConfig for SQLite
+    SQLALCHEMY_ENGINE_OPTIONS = engine_options
+
+
+def fix_database_uri(uri: str) -> str:
+    if not uri:
+        return uri
+    # Convert postgres:// or postgresql:// to postgresql+pg8000:// for pure-Python driver compatibility
+    is_postgres = False
+    if uri.startswith('postgres://'):
+        uri = uri.replace('postgres://', 'postgresql+pg8000://', 1)
+        is_postgres = True
+    elif uri.startswith('postgresql://'):
+        uri = uri.replace('postgresql://', 'postgresql+pg8000://', 1)
+        is_postgres = True
+    
+    # Strip all query parameters from PostgreSQL connection string
+    # (they are handled cleanly via connect_args / ssl_context instead)
+    if is_postgres and '?' in uri:
+        uri = uri.split('?', 1)[0]
+        
+    return uri
+
+
+class DevelopmentConfig(Config):
+    DEBUG = True
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(
+        os.environ.get('DATABASE_URL')
+    ) or 'sqlite:///elevateiq_dev.db'
+    SESSION_COOKIE_SECURE = False
+    WTF_CSRF_ENABLED = True
+
+    # SQLite doesn't need pool config; PostgreSQL uses engine options to pool SSL connections
+    SQLALCHEMY_ENGINE_OPTIONS = {} if not os.environ.get('DATABASE_URL') else engine_options
+
+
+class ProductionConfig(Config):
+    DEBUG = False
+    TESTING = False
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(
+        os.environ.get('DATABASE_URL')
+    ) or 'sqlite:///elevateiq_prod.db'
+
+
+class TestingConfig(Config):
+    TESTING = True
+    WTF_CSRF_ENABLED = False
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    SQLALCHEMY_ENGINE_OPTIONS = {}
+
+
+config_map = {
+    'development': DevelopmentConfig,
+    'production': ProductionConfig,
+    'testing': TestingConfig,
+    'default': DevelopmentConfig,
+}
+
+
+def get_config():
+    env = os.environ.get('FLASK_ENV', 'development')
+    return config_map.get(env, DevelopmentConfig)

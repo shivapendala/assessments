@@ -1,0 +1,142 @@
+{% extends "base.html" %}
+{% block title %}Results{% endblock %}
+{% block body_class %}admin-page{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon-sm"><img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" /></div>
+      <span class="sidebar-brand">ElevateIQ</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a href="{{ url_for('admin.assessments') }}" class="nav-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>Assessments</a>
+      <a href="{{ url_for('admin.results') }}" class="nav-item active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Results</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="admin-avatar">{{ current_user.email[0].upper() }}</div>
+        <div class="admin-details">
+          <span class="admin-email">{{ current_user.email }}</span>
+          <span class="admin-role">Administrator</span>
+        </div>
+      </div>
+      <a href="{{ url_for('admin.logout') }}" class="btn-logout" title="Logout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Results</h1>
+        <p class="page-sub">{{ total }} completed submission{{ 's' if total != 1 else '' }}</p>
+      </div>
+      <div class="header-actions">
+        <a href="{{ url_for('admin.export_results', fmt='csv', search=search) }}" class="btn btn-ghost" id="export-csv">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          CSV
+        </a>
+        <a href="{{ url_for('admin.export_results', fmt='xlsx', search=search) }}" class="btn btn-ghost" id="export-xlsx">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Excel
+        </a>
+      </div>
+    </header>
+
+    <!-- Search -->
+    <form method="GET" action="{{ url_for('admin.results') }}" class="search-bar-form">
+      <div class="search-bar">
+        <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+        <input type="text" name="search" value="{{ search }}" class="search-input" placeholder="Search by name, hall ticket, or email…" id="searchInput" />
+        {% if search %}
+        <a href="{{ url_for('admin.results') }}" class="search-clear">×</a>
+        {% endif %}
+      </div>
+      <button type="submit" class="btn btn-primary">Search</button>
+    </form>
+
+    <!-- Results Table -->
+    <div class="glass-card table-card">
+      <div class="table-wrapper">
+        <table class="data-table" id="resultsTable">
+          <thead>
+            <tr>
+              <th>Hall Ticket</th>
+              <th>Candidate</th>
+              <th>Email</th>
+              <th>Assessment</th>
+              <th class="sortable" data-col="score">Score ↕</th>
+              <th class="sortable" data-col="pct">Percentage ↕</th>
+              <th>Violations</th>
+              <th class="sortable" data-col="status">Status ↕</th>
+              <th class="sortable" data-col="time">Submitted ↕</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for sub in submissions %}
+            <tr class="result-tr {% if sub.status == 'pass' %}row-pass{% else %}row-fail{% endif %}">
+              <td><span class="hall-ticket">{{ sub.candidate.hall_ticket }}</span></td>
+              <td>
+                <div class="cell-primary">{{ sub.candidate.full_name }}</div>
+              </td>
+              <td class="text-muted text-sm">{{ sub.candidate.email }}</td>
+              <td class="text-sm">{{ sub.assessment.title[:30] }}{% if sub.assessment.title|length > 30 %}…{% endif %}</td>
+              <td class="text-center"><strong>{{ sub.score }} / {{ sub.total_questions }}</strong></td>
+              <td class="text-center">
+                <span class="pct-pill {% if sub.percentage >= sub.assessment.pass_percentage %}pct-pass{% else %}pct-fail{% endif %}">
+                  {{ "%.2f"|format(sub.percentage) }}%
+                </span>
+              </td>
+              <td class="text-center">
+                {% if sub.violations > 0 %}
+                <span class="violation-badge">⚠ {{ sub.violations }}</span>
+                {% else %}
+                <span class="text-muted">—</span>
+                {% endif %}
+              </td>
+              <td class="text-center">
+                <span class="badge {% if sub.status == 'pass' %}badge-pass{% else %}badge-fail{% endif %}">
+                  {{ sub.status | upper }}
+                </span>
+              </td>
+              <td class="text-muted text-sm">
+                {% if sub.submitted_at_ist %}
+                {{ sub.submitted_at_ist.strftime('%d %b %Y %I:%M %p') }} IST
+                {% else %}—{% endif %}
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="9" class="empty-row">No results found{% if search %} for "{{ search }}"{% endif %}.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <!-- Pagination -->
+      {% if total_pages > 1 %}
+      <div class="pagination">
+        {% if page > 1 %}
+        <a href="{{ url_for('admin.results', page=page-1, search=search) }}" class="page-btn">← Prev</a>
+        {% endif %}
+        {% for p in range(1, total_pages + 1) %}
+          {% if p == page or p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
+            <a href="{{ url_for('admin.results', page=p, search=search) }}"
+               class="page-btn {% if p == page %}page-active{% endif %}">{{ p }}</a>
+          {% elif p == page - 3 or p == page + 3 %}
+            <span class="page-ellipsis">…</span>
+          {% endif %}
+        {% endfor %}
+        {% if page < total_pages %}
+        <a href="{{ url_for('admin.results', page=page+1, search=search) }}" class="page-btn">Next →</a>
+        {% endif %}
+      </div>
+      {% endif %}
+    </div>
+  </main>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/results.js') }}"></script>
+{% endblock %}

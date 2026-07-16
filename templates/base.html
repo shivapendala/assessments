@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="ElevateIQ — Campus Recruitment Assessment Portal" />
+  <meta name="robots" content="noindex, nofollow" />
+  <meta name="csrf-token" content="{{ csrf_token() }}" />
+  <title>{% block title %}ElevateIQ{% endblock %} | Campus Recruitment Portal</title>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet" />
+
+  <!-- Main CSS -->
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/main.css') }}" />
+
+  {% block extra_css %}{% endblock %}
+</head>
+<body class="{% block body_class %}{% endblock %}">
+
+  {% block body %}{% endblock %}
+
+  <!-- Toast Container -->
+  <div id="toast-container" class="toast-container"></div>
+
+  <!-- Flash messages → auto toast -->
+  {% with messages = get_flashed_messages(with_categories=true) %}
+    {% if messages %}
+      <script>
+        window.__flashMessages = {{ messages | tojson }};
+      </script>
+    {% endif %}
+  {% endwith %}
+
+  <!-- Global JS utilities -->
+  <script>
+    // CSRF token for all fetch() calls
+    const CSRF_TOKEN = document.querySelector('meta[name="csrf-token"]').getAttribute('content');
+
+    async function apiPost(url, data = {}) {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-CSRFToken': CSRF_TOKEN,
+        },
+        body: JSON.stringify(data),
+      });
+      return res.json();
+    }
+
+    // Toast notification system
+    function showToast(message, type = 'info', duration = 4000) {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast toast-${type}`;
+      toast.innerHTML = `
+        <span class="toast-icon">${
+          type === 'success' ? '✓' :
+          type === 'danger'  ? '✕' :
+          type === 'warning' ? '⚠' : 'ℹ'
+        }</span>
+        <span class="toast-msg">${message}</span>
+        <button class="toast-close" onclick="this.parentElement.remove()">×</button>
+      `;
+      container.appendChild(toast);
+      requestAnimationFrame(() => toast.classList.add('show'));
+      setTimeout(() => {
+        toast.classList.remove('show');
+        setTimeout(() => toast.remove(), 400);
+      }, duration);
+    }
+
+    // Display flash messages as toasts
+    if (window.__flashMessages) {
+      window.__flashMessages.forEach(([cat, msg]) => {
+        setTimeout(() => showToast(msg, cat === 'error' ? 'danger' : cat), 200);
+      });
+    }
+
+    // Confirm dialog helper
+    function confirmAction(message, callback) {
+      const overlay = document.createElement('div');
+      overlay.className = 'confirm-overlay';
+      overlay.innerHTML = `
+        <div class="confirm-card">
+          <div class="confirm-icon">⚠</div>
+          <p class="confirm-msg">${message}</p>
+          <div class="confirm-btns">
+            <button class="btn btn-ghost" id="confirm-cancel">Cancel</button>
+            <button class="btn btn-danger" id="confirm-ok">Confirm</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(overlay);
+      requestAnimationFrame(() => overlay.classList.add('show'));
+
+      overlay.querySelector('#confirm-cancel').addEventListener('click', () => {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
+      });
+      overlay.querySelector('#confirm-ok').addEventListener('click', () => {
+        overlay.classList.remove('show');
+        setTimeout(() => overlay.remove(), 300);
+        callback();
+      });
+    }
+  </script>
+
+  {% block scripts %}{% endblock %}
+</body>
+</html>

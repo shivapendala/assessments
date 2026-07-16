@@ -1,0 +1,139 @@
+{% extends "base.html" %}
+{% block title %}Result — {{ candidate.full_name }}{% endblock %}
+{% block body_class %}result-page{% endblock %}
+
+{% block body %}
+<div class="result-bg">
+  <div class="auth-orb orb-1"></div>
+  <div class="auth-orb orb-3"></div>
+
+  <div class="result-container">
+    <div class="result-card glass-card">
+
+      <!-- Header -->
+      <div class="result-header">
+        <div class="cand-logo" style="justify-content:center; margin-bottom:8px;">
+          <div class="logo-icon-sm"><img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" /></div>
+          <span class="sidebar-brand">ElevateIQ</span>
+        </div>
+        <h1 class="result-title">Assessment Complete</h1>
+        <p class="result-subtitle">{{ assessment.title }}</p>
+      </div>
+
+      <!-- Candidate Info -->
+      <div class="result-candidate">
+        <div class="rc-avatar">{{ candidate.full_name[0].upper() }}</div>
+        <div class="rc-info">
+          <span class="rc-name">{{ candidate.full_name }}</span>
+          <span class="rc-ht">Hall Ticket: {{ candidate.hall_ticket }}</span>
+          <span class="rc-email">{{ candidate.email }}</span>
+        </div>
+      </div>
+
+      <!-- Score Ring -->
+      <div class="score-ring-wrapper">
+        {% set pct = submission.percentage | round(1) %}
+        {% set circumference = 251.2 %}
+        {% set fill = [[(pct / 100 * circumference), 0] | max, circumference] | min %}
+        <svg class="score-ring" width="180" height="180" viewBox="0 0 180 180">
+          <!-- Background circle -->
+          <circle cx="90" cy="90" r="80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"/>
+          <!-- Progress circle -->
+          <circle
+            cx="90" cy="90" r="80"
+            fill="none"
+            stroke="{% if submission.status == 'pass' %}#10b981{% else %}#ef4444{% endif %}"
+            stroke-width="12"
+            stroke-linecap="round"
+            stroke-dasharray="{{ circumference }}"
+            stroke-dashoffset="{{ circumference - fill }}"
+            transform="rotate(-90 90 90)"
+            class="ring-progress"
+          />
+          <!-- Inner text -->
+          <text x="90" y="78" text-anchor="middle" fill="#f1f5f9" font-size="32" font-weight="800" font-family="Inter,sans-serif">{{ submission.score }}</text>
+          <text x="90" y="100" text-anchor="middle" fill="#94a3b8" font-size="14" font-family="Inter,sans-serif">out of {{ submission.total_questions }}</text>
+          <text x="90" y="122" text-anchor="middle" fill="{% if submission.status == 'pass' %}#10b981{% else %}#ef4444{% endif %}" font-size="18" font-weight="700" font-family="Inter,sans-serif">{{ pct }}%</text>
+        </svg>
+
+        <!-- PASS / FAIL Badge -->
+        <div class="result-badge {% if submission.status == 'pass' %}result-pass{% else %}result-fail{% endif %}">
+          {% if submission.status == 'pass' %}
+          ✓ PASSED
+          {% else %}
+          ✕ FAILED
+          {% endif %}
+        </div>
+      </div>
+
+      <!-- Stats Breakdown -->
+      <div class="result-stats">
+        <div class="rs-item rs-correct">
+          <span class="rs-icon">✓</span>
+          <span class="rs-value">{{ submission.score }}</span>
+          <span class="rs-label">Correct</span>
+        </div>
+        <div class="rs-item rs-wrong">
+          <span class="rs-icon">✕</span>
+          <span class="rs-value">{{ wrong }}</span>
+          <span class="rs-label">Wrong</span>
+        </div>
+        <div class="rs-item rs-skip">
+          <span class="rs-icon">—</span>
+          <span class="rs-value">{{ unanswered }}</span>
+          <span class="rs-label">Skipped</span>
+        </div>
+        <div class="rs-item rs-vio">
+          <span class="rs-icon">⚠</span>
+          <span class="rs-value">{{ submission.violations }}</span>
+          <span class="rs-label">Violations</span>
+        </div>
+      </div>
+
+      <!-- Pass threshold info -->
+      <div class="pass-info">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
+        Pass threshold was <strong>{{ assessment.pass_percentage }}%</strong>.
+        You scored <strong>{{ "%.2f"|format(submission.percentage) }}%</strong>.
+        {% if submission.submitted_at_ist %}
+        Submitted at {{ submission.submitted_at_ist.strftime('%d %b %Y, %I:%M %p') }} IST.
+        {% endif %}
+      </div>
+
+      <div class="result-footer-msg">
+        {% if submission.status == 'pass' %}
+        <p class="rf-pass">🎉 Congratulations! You have successfully cleared this assessment. The recruitment team will contact you for the next steps.</p>
+        {% else %}
+        <p class="rf-fail">Thank you for participating. Unfortunately, you did not meet the passing criteria. We appreciate your effort and wish you the best.</p>
+        {% endif %}
+        <p class="rf-brand">ElevateIQ Campus Recruitment Platform</p>
+        
+        <div style="margin-top: var(--space-5);">
+          <form method="POST" action="{{ url_for('candidate.logout') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+            <button type="submit" class="btn btn-ghost" style="padding: 8px 24px; cursor: pointer;">Sign Out / Exit Portal</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Animate score ring on load
+  document.addEventListener('DOMContentLoaded', () => {
+    const ring = document.querySelector('.ring-progress');
+    if (ring) {
+      const dashoffset = ring.getAttribute('stroke-dashoffset');
+      ring.style.transition = 'none';
+      ring.setAttribute('stroke-dashoffset', 251.2);
+      setTimeout(() => {
+        ring.style.transition = 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)';
+        ring.setAttribute('stroke-dashoffset', dashoffset);
+      }, 300);
+    }
+  });
+</script>
+{% endblock %}

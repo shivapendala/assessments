@@ -1,0 +1,197 @@
+{% extends "base.html" %}
+{% block title %}Assessments{% endblock %}
+{% block body_class %}admin-page{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+  <!-- Sidebar -->
+  <aside class="sidebar">
+    <div class="sidebar-logo">
+      <div class="logo-icon-sm">
+        <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" />
+      </div>
+      <span class="sidebar-brand">ElevateIQ</span>
+    </div>
+    <nav class="sidebar-nav">
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>Dashboard</a>
+      <a href="{{ url_for('admin.assessments') }}" class="nav-item active"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>Assessments</a>
+      <a href="{{ url_for('admin.results') }}" class="nav-item"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>Results</a>
+    </nav>
+    <div class="sidebar-footer">
+      <div class="admin-info">
+        <div class="admin-avatar">{{ current_user.email[0].upper() }}</div>
+        <div class="admin-details">
+          <span class="admin-email">{{ current_user.email }}</span>
+          <span class="admin-role">Administrator</span>
+        </div>
+      </div>
+      <a href="{{ url_for('admin.logout') }}" class="btn-logout" title="Logout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
+    </div>
+  </aside>
+
+  <main class="admin-main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Assessments</h1>
+        <p class="page-sub">Create and manage recruitment assessments</p>
+      </div>
+      <button class="btn btn-primary" onclick="openModal('createModal')">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Create Assessment
+      </button>
+    </header>
+
+    <!-- Table -->
+    <div class="glass-card table-card">
+      <div class="table-wrapper">
+        <table class="data-table" id="assessmentsTable">
+          <thead>
+            <tr>
+              <th>#</th>
+              <th>Title</th>
+              <th>Duration</th>
+              <th>Questions</th>
+              <th>Pass %</th>
+              <th>Status</th>
+              <th>Created</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for a in assessments %}
+            <tr>
+              <td class="text-muted">{{ loop.index }}</td>
+              <td>
+                <div class="cell-primary">{{ a.title }}</div>
+                {% if a.description %}
+                <div class="cell-secondary">{{ a.description[:60] }}{% if a.description|length > 60 %}…{% endif %}</div>
+                {% endif %}
+              </td>
+              <td>{{ a.duration }} min</td>
+              <td>
+                <a href="{{ url_for('admin.questions', assessment_id=a.id) }}" class="link-violet">
+                  {{ a.question_count }} questions
+                </a>
+              </td>
+              <td>{{ a.pass_percentage }}%</td>
+              <td>
+                <span class="badge {% if a.status == 'active' %}badge-active{% else %}badge-inactive{% endif %}">
+                  {% if a.status == 'active' %}● Active{% else %}○ Inactive{% endif %}
+                </span>
+              </td>
+              <td class="text-muted text-sm">{{ a.created_at.strftime('%d %b %Y') }}</td>
+              <td>
+                <div class="action-btns">
+                  <a href="{{ url_for('admin.questions', assessment_id=a.id) }}" class="btn-icon" title="Questions">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+                  </a>
+                  <button class="btn-icon" title="Edit" onclick="openEditModal({{ a.to_dict() | tojson }})">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                  </button>
+                  <form method="POST" action="{{ url_for('admin.toggle_assessment_status', assessment_id=a.id) }}" style="display:inline">
+                    <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+                    <button type="submit" class="btn-icon {% if a.status == 'active' %}btn-icon-warning{% else %}btn-icon-success{% endif %}"
+                      title="{{ 'Deactivate' if a.status == 'active' else 'Activate' }}">
+                      {% if a.status == 'active' %}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="8" y1="12" x2="16" y2="12"/></svg>
+                      {% else %}
+                      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 8 12 12 14 14"/></svg>
+                      {% endif %}
+                    </button>
+                  </form>
+                  <button class="btn-icon btn-icon-danger" title="Delete"
+                    onclick="deleteAssessment({{ a.id }}, '{{ a.title | e }}')">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a1 1 0 0 1 1-1h4a1 1 0 0 1 1 1v2"/></svg>
+                  </button>
+                </div>
+              </td>
+            </tr>
+            {% else %}
+            <tr><td colspan="8" class="empty-row">No assessments yet. Create your first one!</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Create Modal -->
+<div class="modal-overlay" id="createModal">
+  <div class="modal-card glass-card">
+    <div class="modal-header">
+      <h2 class="modal-title">Create Assessment</h2>
+      <button class="modal-close" onclick="closeModal('createModal')">×</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.create_assessment') }}" class="modal-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label class="form-label">Title <span class="req">*</span></label>
+        <input type="text" name="title" class="form-input" placeholder="e.g. Campus Aptitude Test 2024" required maxlength="255" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" class="form-input form-textarea" placeholder="Brief description of the assessment..." rows="3" maxlength="1000"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Duration (minutes) <span class="req">*</span></label>
+          <input type="number" name="duration" class="form-input" value="60" min="1" max="480" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pass Percentage (%) <span class="req">*</span></label>
+          <input type="number" name="pass_percentage" class="form-input" value="60" min="0" max="100" step="0.1" required />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('createModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Create Assessment</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Edit Modal -->
+<div class="modal-overlay" id="editModal">
+  <div class="modal-card glass-card">
+    <div class="modal-header">
+      <h2 class="modal-title">Edit Assessment</h2>
+      <button class="modal-close" onclick="closeModal('editModal')">×</button>
+    </div>
+    <form method="POST" id="editForm" class="modal-form">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+      <div class="form-group">
+        <label class="form-label">Title <span class="req">*</span></label>
+        <input type="text" name="title" id="edit-title" class="form-input" required maxlength="255" />
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea name="description" id="edit-description" class="form-input form-textarea" rows="3" maxlength="1000"></textarea>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Duration (minutes) <span class="req">*</span></label>
+          <input type="number" name="duration" id="edit-duration" class="form-input" min="1" max="480" required />
+        </div>
+        <div class="form-group">
+          <label class="form-label">Pass Percentage (%) <span class="req">*</span></label>
+          <input type="number" name="pass_percentage" id="edit-pass-pct" class="form-input" min="0" max="100" step="0.1" required />
+        </div>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn btn-ghost" onclick="closeModal('editModal')">Cancel</button>
+        <button type="submit" class="btn btn-primary">Save Changes</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<!-- Delete form (hidden) -->
+<form method="POST" id="deleteForm" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/admin.js') }}"></script>
+{% endblock %}

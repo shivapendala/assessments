@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block title %}Candidate Registration{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+<div class="auth-bg">
+  <div class="auth-orb orb-1"></div>
+  <div class="auth-orb orb-2"></div>
+  <div class="auth-orb orb-3"></div>
+
+  <div class="auth-container">
+    <div class="auth-card glass-card">
+      <!-- Logo -->
+      <div class="auth-logo">
+        <div class="logo-icon">
+          <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" />
+        </div>
+        <div class="logo-text">
+          <span class="logo-name">ElevateIQ</span>
+          <span class="logo-sub">Campus Recruitment Portal</span>
+        </div>
+      </div>
+
+      <h1 class="auth-title">Candidate Registration</h1>
+      <p class="auth-subtitle">Register to access your recruitment assessment</p>
+
+      <form method="POST" action="{{ url_for('candidate.register') }}" class="auth-form" novalidate>
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+
+        <div class="form-group">
+          <label class="form-label" for="full_name">Full Name <span class="req">*</span></label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+            </span>
+            <input
+              type="text" id="full_name" name="full_name"
+              class="form-input" placeholder="Enter your full name"
+              value="{{ full_name | default('') }}"
+              autocomplete="name" required minlength="2" maxlength="255"
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="email">Email Address <span class="req">*</span></label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/><polyline points="22,6 12,13 2,6"/></svg>
+            </span>
+            <input
+              type="email" id="email" name="email"
+              class="form-input" placeholder="you@college.edu"
+              value="{{ email | default('') }}"
+              autocomplete="email" required
+            />
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="hall_ticket">Hall Ticket Number <span class="req">*</span></label>
+          <div class="input-wrapper">
+            <span class="input-icon">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
+            </span>
+            <input
+              type="text" id="hall_ticket" name="hall_ticket"
+              class="form-input" placeholder="e.g. 22CS1001"
+              value="{{ hall_ticket | default('') }}"
+              autocomplete="off" required
+              style="text-transform: uppercase"
+            />
+          </div>
+          <span class="form-hint">Alphanumeric, 3–50 characters. Must match your official hall ticket.</span>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full btn-lg">
+          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+          Register &amp; Continue
+        </button>
+      </form>
+
+      <div class="auth-divider">
+        <span>Already registered?</span>
+      </div>
+      <p class="auth-note">
+        If you have already registered, your session should be active. Check your browser or contact the admin.
+      </p>
+
+      <p class="auth-footer">ElevateIQ Campus Recruitment Platform · Secure &amp; Proctored</p>
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+  // Auto uppercase hall ticket input
+  document.getElementById('hall_ticket').addEventListener('input', function() {
+    const pos = this.selectionStart;
+    this.value = this.value.toUpperCase();
+    this.setSelectionRange(pos, pos);
+  });
+</script>
+{% endblock %}

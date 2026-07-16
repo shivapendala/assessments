@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+{% block title %}Assessment — {{ assessment.title }}{% endblock %}
+{% block body_class %}assessment-page{% endblock %}
+
+{% block body %}
+<!-- Screenshare Proctoring Setup Overlay -->
+<div class="violation-overlay" id="screenshareOverlay" style="display: flex;">
+  <div class="violation-card glass-card">
+    <div class="vio-icon">🖥️</div>
+    <h2 class="vio-title" style="color: var(--violet);">Proctoring Setup Required</h2>
+    <p class="vio-msg">This assessment is monitored. You must share your <strong>Entire Screen</strong> before you can view the questions. If you stop sharing at any point, your assessment will be submitted automatically.</p>
+    <button class="btn btn-primary btn-lg btn-full" id="startScreenshareBtn" onclick="requestScreenshare()">Enable Screenshare &amp; Start Test</button>
+  </div>
+</div>
+
+<!-- Violation Warning Overlay -->
+<div class="violation-overlay" id="violationOverlay" style="display:none">
+  <div class="violation-card glass-card">
+    <div class="vio-icon">⚠️</div>
+    <h2 class="vio-title" id="vioTitle">Tab Switch Detected!</h2>
+    <p class="vio-msg" id="vioMsg">Please stay on this tab. Switching tabs is a violation.</p>
+    <div class="vio-counter">Violation <span id="vioCount">1</span> of 3</div>
+    <button class="btn btn-primary" onclick="dismissViolation()">I Understand — Continue</button>
+  </div>
+</div>
+
+<!-- Auto-submit overlay -->
+<div class="autosubmit-overlay" id="autoSubmitOverlay" style="display:none">
+  <div class="violation-card glass-card">
+    <div class="vio-icon">🚫</div>
+    <h2 class="vio-title">Assessment Auto-Submitted</h2>
+    <p class="vio-msg">You have exceeded the maximum number of tab violations (3). Your assessment has been automatically submitted.</p>
+  </div>
+</div>
+
+<!-- Assessment Layout -->
+<div class="exam-layout">
+
+  <!-- Top Bar -->
+  <header class="exam-header">
+    <div class="exam-brand">
+      <div class="logo-icon-sm-white"><img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" /></div>
+      <span class="exam-assessment-title">{{ assessment.title }}</span>
+    </div>
+
+    <!-- Timer -->
+    <div class="timer-wrapper" id="timerWrapper">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+      <span class="timer-display" id="timerDisplay">{{ '%02d'|format(assessment.duration) }}:00</span>
+    </div>
+
+    <div class="exam-right">
+      <div class="exam-candidate">
+        <span class="ec-name">{{ candidate.full_name }}</span>
+        <span class="ec-ht">{{ candidate.hall_ticket }}</span>
+      </div>
+      {% if submission.violations > 0 %}
+      <div class="vio-indicator" id="vioIndicator">
+        ⚠ <span id="vioHeader">{{ submission.violations }}</span>/3 violations
+      </div>
+      {% else %}
+      <div class="vio-indicator vio-clear" id="vioIndicator">
+        ✓ <span id="vioHeader">0</span>/3 violations
+      </div>
+      {% endif %}
+    </div>
+  </header>
+
+  <!-- Body -->
+  <div class="exam-body">
+
+    <!-- Question Panel -->
+    <section class="question-panel" id="questionPanel">
+      <div class="q-progress">
+        <span id="qProgressText">Question <span id="currentQNum">1</span> of {{ questions|length }}</span>
+        <div class="progress-bar">
+          <div class="progress-fill" id="progressFill" style="width: {{ (1/questions|length*100)|round(1) }}%"></div>
+        </div>
+      </div>
+
+      <div class="q-content" id="questionContent">
+        <!-- Populated by JS -->
+        <div class="q-loading">Loading question…</div>
+      </div>
+
+      <!-- Navigation Bottom Bar -->
+      <div class="q-nav-bar">
+        <button class="btn btn-ghost" id="prevBtn" onclick="navigateTo(currentQuestion - 1)" disabled>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
+          Previous
+        </button>
+
+        <button class="btn btn-danger" id="submitBtn" onclick="confirmSubmit()">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
+          Submit Assessment
+        </button>
+
+        <button class="btn btn-primary" id="nextBtn" onclick="navigateTo(currentQuestion + 1)">
+          Next
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        </button>
+      </div>
+    </section>
+
+    <!-- Navigator Panel -->
+    <aside class="navigator-panel">
+      <div class="nav-panel-header">Question Navigator</div>
+
+      <div class="nav-legend">
+        <span class="legend-item"><span class="legend-dot dot-answered"></span>Answered</span>
+        <span class="legend-item"><span class="legend-dot dot-current"></span>Current</span>
+        <span class="legend-item"><span class="legend-dot dot-unanswered"></span>Not Answered</span>
+      </div>
+
+      <div class="nav-grid" id="navGrid">
+        {% for q in questions %}
+        <button
+          class="nav-btn {% if loop.index == 1 %}nav-current{% endif %}"
+          id="nav-{{ loop.index0 }}"
+          onclick="navigateTo({{ loop.index0 }})"
+          data-index="{{ loop.index0 }}"
+        >{{ loop.index }}</button>
+        {% endfor %}
+      </div>
+
+      <div class="nav-summary">
+        <div class="ns-item">
+          <span class="ns-num" id="answeredCount">0</span>
+          <span class="ns-label">Answered</span>
+        </div>
+        <div class="ns-item">
+          <span class="ns-num" id="unansweredCount">{{ questions|length }}</span>
+          <span class="ns-label">Not Answered</span>
+        </div>
+      </div>
+
+      <!-- Integrated Proctor Cam -->
+      <div class="proctor-cam-card glass-card" id="proctorCamContainer" style="position: relative; width: 100%; height: 130px; bottom: auto; right: auto; z-index: auto; margin-top: var(--space-4);">
+        <div class="pcc-header">
+          <span class="pcc-dot"></span>
+          <span class="pcc-status">REC ● LIVE</span>
+        </div>
+        <video id="proctorVideo" autoplay playsinline muted></video>
+        <div class="pcc-fallback" id="proctorVideoFallback" style="display: none; flex-direction: column; gap: 8px; justify-content: center; align-items: center; height: calc(100% - 20px);">
+          <div class="pcc-lens">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger);"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            <div class="pcc-scanner-line"></div>
+          </div>
+          <span style="font-size: 8px; font-weight: 800; color: var(--danger); letter-spacing: 0.05em; text-transform: uppercase;">SECURE FEED ACTIVE</span>
+        </div>
+      </div>
+
+    </aside>
+  </div>
+</div>
+
+<!-- Submit Form (hidden) -->
+<form method="POST" action="{{ url_for('assessment.submit') }}" id="submitForm" style="display:none">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+</form>
+
+<!-- Questions Data (injected for JS) -->
+<script>
+  const QUESTIONS = {{ questions_data | tojson }};
+  const SAVED_ANSWERS = {{ saved_answers | tojson }};
+  const TOTAL_DURATION_SECONDS = {{ assessment.duration * 60 }};
+  const SUBMISSION_ID = {{ submission.id }};
+  const INITIAL_VIOLATIONS = {{ submission.violations }};
+  const SAVE_URL = "{{ url_for('assessment.save_answer') }}";
+  const VIOLATION_URL = "{{ url_for('assessment.record_violation') }}";
+  const SUBMIT_URL = "{{ url_for('assessment.submit') }}";
+</script>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/assessment.js') }}"></script>
+{% endblock %}
