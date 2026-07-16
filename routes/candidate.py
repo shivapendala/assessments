@@ -48,14 +48,25 @@ def register():
             return render_template('candidate/register.html',
                                    full_name=full_name, email=email, hall_ticket=hall_ticket)
 
-        # Check uniqueness
-        if Candidate.query.filter_by(email=email).first():
-            flash('This email is already registered. Contact admin if this is an error.', 'danger')
-            return render_template('candidate/register.html',
-                                   full_name=full_name, email=email, hall_ticket=hall_ticket)
+        # Check uniqueness & allow login
+        existing_candidate = Candidate.query.filter_by(email=email).first()
+        if existing_candidate:
+            if existing_candidate.hall_ticket == hall_ticket:
+                # Log them in and redirect to dashboard
+                session.permanent = True
+                session['candidate_id'] = existing_candidate.id
+                session['candidate_name'] = existing_candidate.full_name
+                session['hall_ticket'] = existing_candidate.hall_ticket
+                flash(f'Welcome back, {existing_candidate.full_name}!', 'info')
+                return redirect(url_for('candidate.dashboard'))
+            else:
+                flash('This email is already registered with a different Hall Ticket.', 'danger')
+                return render_template('candidate/register.html',
+                                       full_name=full_name, email=email, hall_ticket=hall_ticket)
 
-        if Candidate.query.filter_by(hall_ticket=hall_ticket).first():
-            flash('This Hall Ticket is already registered.', 'danger')
+        existing_hall_ticket = Candidate.query.filter_by(hall_ticket=hall_ticket).first()
+        if existing_hall_ticket:
+            flash('This Hall Ticket is already registered under a different email address.', 'danger')
             return render_template('candidate/register.html',
                                    full_name=full_name, email=email, hall_ticket=hall_ticket)
 
