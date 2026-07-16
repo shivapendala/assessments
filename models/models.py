@@ -3,6 +3,7 @@ ElevateIQ — SQLAlchemy ORM Models
 All database tables with proper indexes, relationships, and constraints.
 """
 from datetime import datetime
+from sqlalchemy import func
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -76,18 +77,21 @@ class Assessment(db.Model):
     status = db.Column(db.String(20), nullable=False, default='inactive')  # active | inactive
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 
-    # Relationships
+    # Relationships — use lazy='select' so SQLAlchemy can batch-load with joinedload
     questions = db.relationship(
-        'Question', backref='assessment', lazy='dynamic',
+        'Question', backref='assessment', lazy='select',
         cascade='all, delete-orphan', order_by='Question.id'
     )
     submissions = db.relationship(
-        'Submission', backref='assessment', lazy='dynamic'
+        'Submission', backref='assessment', lazy='select'
     )
 
     @property
     def question_count(self):
-        return self.questions.count()
+        """Cached count via subquery — avoids N+1 per-row COUNT calls."""
+        return db.session.query(func.count(Question.id)).filter(
+            Question.assessment_id == self.id
+        ).scalar() or 0
 
     @property
     def is_active(self):
@@ -173,9 +177,9 @@ class Submission(db.Model):
     status = db.Column(db.String(20), default='in_progress', index=True)  # in_progress | pass | fail
     submitted_at = db.Column(db.DateTime, nullable=True)
 
-    # Relationships
+    # Relationships — lazy='select' allows joinedload() in route queries
     answers = db.relationship(
-        'Answer', backref='submission', lazy='dynamic',
+        'Answer', backref='submission', lazy='select',
         cascade='all, delete-orphan'
     )
 
@@ -230,6 +234,8 @@ class Answer(db.Model):
     # Each question can only have one answer per submission
     __table_args__ = (
         db.UniqueConstraint('submission_id', 'question_id', name='uq_submission_question'),
+        # Composite index for fast answer lookups during auto-save + submission scoring
+        db.Index('ix_answers_submission_question', 'submission_id', 'question_id'),
     )
 
     def __repr__(self):

@@ -3,6 +3,7 @@ ElevateIQ — Application Factory
 Flask app creation with all extensions and blueprints registered.
 """
 import os
+from datetime import timedelta
 from flask import Flask, render_template
 from flask_login import LoginManager
 from flask_wtf.csrf import CSRFProtect
@@ -10,12 +11,14 @@ from flask_migrate import Migrate
 
 from config import get_config
 from models.models import db, Admin
+from extensions import cache
 
 
 # ─── Extension instances ───────────────────────────────────────────────────
 login_manager = LoginManager()
 csrf = CSRFProtect()
 migrate = Migrate()
+# cache is imported from extensions.py to avoid circular imports
 
 
 def create_app(config_class=None):
@@ -26,10 +29,19 @@ def create_app(config_class=None):
         config_class = get_config()
     app.config.from_object(config_class)
 
+    # Static file browser caching (1 year in production, 0 in debug)
+    is_prod = not app.config.get('DEBUG', False)
+    app.config['SEND_FILE_MAX_AGE_DEFAULT'] = timedelta(days=365) if is_prod else timedelta(seconds=0)
+
+    # Flask-Caching: SimpleCache (in-process, no Redis needed)
+    app.config.setdefault('CACHE_TYPE', 'SimpleCache')
+    app.config.setdefault('CACHE_DEFAULT_TIMEOUT', 300)  # 5 minutes
+
     # ── Extensions ─────────────────────────────────────────────────────────
     db.init_app(app)
     migrate.init_app(app, db)
     csrf.init_app(app)
+    cache.init_app(app)
 
     # Flask-Login
     login_manager.init_app(app)

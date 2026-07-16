@@ -303,9 +303,24 @@ function confirmSubmit() {
   confirmAction(msg, () => doSubmit());
 }
 
+function showSubmittingOverlay(title, msg) {
+  const overlay = document.getElementById('submittingOverlay');
+  const titleEl = document.getElementById('submittingTitle');
+  const msgEl   = document.getElementById('submittingMsg');
+  if (titleEl) titleEl.textContent = title;
+  if (msgEl)   msgEl.textContent   = msg;
+  if (overlay)  overlay.style.display = 'flex';
+}
+
 async function doSubmit() {
   if (isSubmitting) return;
   isSubmitting = true;
+
+  // Show full-page overlay immediately so user sees clean screen
+  showSubmittingOverlay(
+    'Submitting Your Assessment…',
+    'Saving your answers and calculating your score. Please wait.'
+  );
 
   clearInterval(timerInterval);
   localStorage.removeItem(LS_KEY_TIMER);
@@ -323,8 +338,23 @@ async function doSubmit() {
 
 async function autoSubmit(reason) {
   if (isSubmitting) return;
-  console.warn('Auto-submitting:', reason);
   isSubmitting = true;
+
+  // Determine the right message based on reason
+  const isViolation = reason.toLowerCase().includes('violation');
+  const isTimer     = reason.toLowerCase().includes('timer');
+  showSubmittingOverlay(
+    isViolation
+      ? '⚠️ Auto-Submitted: Violation Limit Reached'
+      : isTimer
+        ? '⏰ Time’s Up — Auto-Submitting…'
+        : '🚨 Auto-Submitted',
+    isViolation
+      ? 'You exceeded 3 tab switches. Your assessment has been submitted. Calculating your score…'
+      : isTimer
+        ? 'The time limit has been reached. Your answers are being saved and scored…'
+        : 'Your assessment is being submitted. Please wait…'
+  );
 
   clearInterval(timerInterval);
   localStorage.removeItem(LS_KEY_TIMER);
@@ -392,10 +422,9 @@ function dismissViolation() {
 }
 
 function showAutoSubmitOverlay() {
-  const overlay = document.getElementById('autoSubmitOverlay');
+  // legacy — now handled by showSubmittingOverlay inside autoSubmit
   const vOverlay = document.getElementById('violationOverlay');
   if (vOverlay) vOverlay.style.display = 'none';
-  if (overlay)  overlay.style.display = 'flex';
 }
 
 function updateViolationUI(count) {

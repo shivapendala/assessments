@@ -8,6 +8,7 @@ from flask import (
     Blueprint, render_template, redirect, url_for,
     flash, request, session, jsonify
 )
+from sqlalchemy import func
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from models.models import db, Assessment, Question, Submission, Answer, Candidate
@@ -57,7 +58,9 @@ def start():
             return redirect(url_for('assessment.engine'))
 
     # Create new submission
-    total_q = active_assessment.questions.count()
+    total_q = db.session.query(func.count(Question.id)).filter_by(
+        assessment_id=active_assessment.id
+    ).scalar() or 0
     if total_q == 0:
         flash('This assessment has no questions yet. Contact admin.', 'warning')
         return redirect(url_for('candidate.dashboard'))

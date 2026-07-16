@@ -9,6 +9,7 @@ from flask import (
 )
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import IntegrityError
+from sqlalchemy.orm import joinedload
 
 from models.models import db, Admin, Assessment, Question, Submission, Candidate
 from services.stats_service import get_dashboard_stats, get_recent_results
@@ -65,9 +66,10 @@ def logout():
 def dashboard():
     stats = get_dashboard_stats()
     
-    # Retrieve passed and failed members separately
+    # Retrieve passed and failed members separately using joinedload to avoid N+1
     passed_results = (
         db.session.query(Submission)
+        .options(joinedload(Submission.candidate))
         .filter_by(status='pass')
         .order_by(Submission.submitted_at.desc())
         .limit(10)
@@ -75,13 +77,15 @@ def dashboard():
     )
     failed_results = (
         db.session.query(Submission)
+        .options(joinedload(Submission.candidate))
         .filter_by(status='fail')
         .order_by(Submission.submitted_at.desc())
         .limit(10)
         .all()
     )
     
-    assessments = Assessment.query.order_by(Assessment.created_at.desc()).all()
+    # Only load the 10 most recent assessments for the dashboard sidebar
+    assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(10).all()
     return render_template(
         'admin/dashboard.html',
         stats=stats,
@@ -285,6 +289,10 @@ def results():
         db.session.query(Submission)
         .join(Submission.candidate)
         .join(Submission.assessment)
+        .options(
+            joinedload(Submission.candidate),
+            joinedload(Submission.assessment),
+        )
         .filter(Submission.status != 'in_progress')
         .order_by(Submission.submitted_at.desc())
     )

@@ -1,10 +1,10 @@
 /* ============================================================
    ElevateIQ — Clean White Premium Theme
    Light Glassmorphism · Neon Violet · Emerald Green Accents
+   Performance-Optimised Build
    ============================================================ */
 
-/* ── Google Fonts ────────────────────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+/* ── Font fallback (font is preloaded via <link> in base.html, no @import needed) ── */
 
 /* ── Design Tokens ──────────────────────────────────────── */
 :root {
@@ -15,11 +15,11 @@
   --bg-card:      #ffffff;
   --bg-card-hover: #fdfdfd;
 
-  /* Premium Light Glassmorphism */
-  --glass-bg:     rgba(255, 255, 255, 0.8);
+  /* Premium Light Glassmorphism (blur reduced 20px→8px for GPU perf) */
+  --glass-bg:     rgba(255, 255, 255, 0.85);
   --glass-border: rgba(139, 92, 246, 0.16);
   --glass-shadow: 0 10px 30px -10px rgba(79, 70, 229, 0.08), 0 1px 3px rgba(0, 0, 0, 0.02);
-  --glass-blur:   20px;
+  --glass-blur:   8px;
 
   /* Violet Palette */
   --violet:       #7c3aed;
@@ -118,6 +118,8 @@ ul { list-style: none; }
   border: 1px solid var(--glass-border);
   border-radius: var(--r-xl);
   box-shadow: var(--glass-shadow);
+  will-change: transform;
+  contain: layout style;
   transition: transform var(--t-base) var(--ease),
               box-shadow var(--t-base) var(--ease),
               border-color var(--t-base) var(--ease);
@@ -142,6 +144,7 @@ ul { list-style: none; }
   border: 1px solid transparent;
   position: relative;
   overflow: hidden;
+  will-change: transform;
 }
 .btn::after {
   content: '';
@@ -386,13 +389,15 @@ ul { list-style: none; }
 .auth-orb {
   position: fixed;
   border-radius: 50%;
-  filter: blur(100px);
+  filter: blur(50px);          /* Reduced from 100px → 50px for GPU savings */
   pointer-events: none;
-  animation: float 10s ease-in-out infinite;
+  will-change: transform;      /* Promote to compositor layer */
+  transform: translateZ(0);    /* Force GPU layer */
+  animation: float 12s ease-in-out infinite;
 }
-.orb-1 { width: 400px; height: 400px; background: rgba(139,92,246,0.06); top: -100px; left: -100px; }
-.orb-2 { width: 300px; height: 300px; background: rgba(16,185,129,0.04); bottom: -80px; right: -60px; animation-delay: -3s; }
-.orb-3 { width: 250px; height: 250px; background: rgba(139,92,246,0.04); bottom: 20%; left: 20%; animation-delay: -5s; }
+.orb-1 { width: 320px; height: 320px; background: rgba(139,92,246,0.07); top: -80px; left: -80px; }
+.orb-2 { width: 240px; height: 240px; background: rgba(16,185,129,0.05); bottom: -60px; right: -50px; animation-delay: -4s; }
+.orb-3 { width: 200px; height: 200px; background: rgba(139,92,246,0.04); bottom: 20%; left: 20%; animation-delay: -6s; }
 
 @keyframes float {
   0%, 100% { transform: translateY(0); }
@@ -461,6 +466,7 @@ ul { list-style: none; }
   position: fixed;
   top: 0; left: 0; bottom: 0;
   z-index: 100;
+  contain: layout style;       /* Isolate sidebar layout recalcs */
 }
 
 .sidebar-logo {
@@ -499,8 +505,9 @@ ul { list-style: none; }
   color: var(--text-secondary);
   font-size: 14px;
   font-weight: 500;
-  transition: all var(--t-base) var(--ease);
+  transition: background var(--t-base) var(--ease), color var(--t-base) var(--ease);
   border: 1px solid transparent;
+  will-change: background;
 }
 .nav-item:hover {
   background: var(--bg-secondary);
