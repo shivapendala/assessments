@@ -30,7 +30,7 @@ def seed_assessment():
                 "graded from Basic to Hard difficulty. Time limit: 20 minutes."
             ),
             duration=20,
-            pass_percentage=60.0,
+            pass_percentage=50.0,
             status='active'
         )
         db.session.add(a)

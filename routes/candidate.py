@@ -107,11 +107,21 @@ def dashboard():
     if completed_sub:
         return redirect(url_for('assessment.result', submission_id=completed_sub.id))
 
-    # Always enforce the IT track
-    session['selected_track'] = 'IT'
+    selected_track = session.get('selected_track')
 
-    # Fetch IT assessment
-    assessment = Assessment.query.filter(Assessment.title.like('%IT%'), ~Assessment.title.like('%Non-IT%')).first()
+    if not selected_track:
+        # Show track selection screen
+        return render_template(
+            'candidate/dashboard.html',
+            candidate=candidate,
+            show_selection=True
+        )
+
+    # Fetch corresponding assessment based on selected track
+    if selected_track == 'Non-IT':
+        assessment = Assessment.query.filter(Assessment.title.like('%Non-IT%')).first()
+    else:
+        assessment = Assessment.query.filter(Assessment.title.like('%IT%'), ~Assessment.title.like('%Non-IT%')).first()
 
     # Check if already attempted
     existing_submission = None
@@ -125,8 +135,40 @@ def dashboard():
         'candidate/dashboard.html',
         candidate=candidate,
         assessment=assessment,
-        existing_submission=existing_submission
+        existing_submission=existing_submission,
+        selected_track=selected_track,
+        show_selection=False
     )
+
+
+@candidate_bp.route('/select-track', methods=['POST'])
+@candidate_required
+def select_track():
+    candidate_id = session['candidate_id']
+    # Block track selection if they have any submission in progress or completed
+    existing = Submission.query.filter_by(candidate_id=candidate_id).first()
+    if existing:
+        flash('You already have an active or completed assessment session.', 'warning')
+        return redirect(url_for('candidate.dashboard'))
+
+    track = request.form.get('track', 'IT')
+    if track not in ('IT', 'Non-IT'):
+        track = 'IT'
+    session['selected_track'] = track
+    return redirect(url_for('candidate.dashboard'))
+
+
+@candidate_bp.route('/change-track', methods=['POST'])
+@candidate_required
+def change_track():
+    candidate_id = session['candidate_id']
+    # If they already have an in-progress submission, block changing track
+    in_progress = Submission.query.filter_by(candidate_id=candidate_id, status='in_progress').first()
+    if in_progress:
+        flash('Cannot change track while an assessment is in progress.', 'danger')
+        return redirect(url_for('candidate.dashboard'))
+    session.pop('selected_track', None)
+    return redirect(url_for('candidate.dashboard'))
 
 
 @candidate_bp.route('/candidate/logout', methods=['POST'])

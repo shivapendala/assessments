@@ -37,12 +37,56 @@
       </div>
     </div>
 
-    {% if not assessment %}
+    {% if show_selection %}
+    <!-- Track Selection Screen -->
+    <div class="glass-card" style="padding: var(--space-8); text-align: center;">
+      <h2 style="font-size: 20px; font-weight: 800; color: var(--text-primary); margin-bottom: 8px;">Select Your Assessment Track</h2>
+      <p style="color: var(--text-secondary); font-size: 14px; margin-bottom: var(--space-6); max-width: 520px; margin-left: auto; margin-right: auto;">
+        Please choose the role category you are applying for. This will load the correct assessment matching your job requirements.
+      </p>
+
+      <form method="POST" action="{{ url_for('candidate.select_track') }}" id="trackForm">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <input type="hidden" name="track" id="selectedTrackInput" value="" />
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-5); margin-bottom: var(--space-6);">
+          <!-- Option 1: IT Track -->
+          <div class="option-item" id="trackCardIT" onclick="selectTrackUI('IT')" style="flex-direction: column; text-align: center; padding: var(--space-6); align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: 1.5px solid var(--bg-tertiary);">
+            <div style="font-size: 40px;">💻</div>
+            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 8px;">Information Technology (IT)</h3>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 4px;">
+              Python Developer · Java Full Stack · Automation Engineer · Frontend Developer · Cyber Security
+            </p>
+          </div>
+
+          <!-- Option 2: Non-IT Track -->
+          <div class="option-item" id="trackCardNonIT" onclick="selectTrackUI('Non-IT')" style="flex-direction: column; text-align: center; padding: var(--space-6); align-items: center; justify-content: center; gap: 8px; cursor: pointer; border: 1.5px solid var(--bg-tertiary);">
+            <div style="font-size: 40px;">📋</div>
+            <h3 style="font-size: 15px; font-weight: 700; color: var(--text-primary); margin-top: 8px;">Healthcare &amp; Operations (Non-IT)</h3>
+            <p style="font-size: 12px; color: var(--text-muted); line-height: 1.5; margin-top: 4px;">
+              Medical Coding · Medical Billing · AR Caller · Telecaller · Verification · Data Entry
+            </p>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" id="confirmTrackBtn" disabled style="min-width: 220px;">
+          Confirm Track Selection
+        </button>
+      </form>
+    </div>
+
+    {% elif not assessment %}
     <!-- No Active Assessment -->
     <div class="glass-card no-assessment">
       <div class="na-icon">📋</div>
       <h2>No Active Assessment</h2>
       <p>There are no assessments currently active. Please check back later or contact the administrator.</p>
+      <div style="margin-top: var(--space-4);">
+        <form method="POST" action="{{ url_for('candidate.change_track') }}">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+          <button type="submit" class="btn btn-ghost">← Go Back &amp; Select Different Track</button>
+        </form>
+      </div>
     </div>
 
     {% elif existing_submission and existing_submission.status != 'in_progress' %}
@@ -57,7 +101,18 @@
     </div>
 
     {% else %}
+    <!-- Selected Track Banner -->
+    <div style="display: flex; align-items: center; justify-content: space-between; background: var(--bg-primary); border: 1px solid var(--bg-tertiary); border-radius: var(--r-md); padding: var(--space-3) var(--space-4); margin-bottom: 4px; font-size: 14px;">
+      <span style="color: var(--text-secondary);">
+        Selected Track: <strong style="color: var(--violet);">{{ 'Information Technology (IT)' if selected_track == 'IT' else 'Healthcare &amp; Operations (Non-IT)' }}</strong>
+      </span>
+      <form method="POST" action="{{ url_for('candidate.change_track') }}" style="display: inline;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
+        <button type="submit" class="link-violet" style="font-size: 13px; text-decoration: underline; background: none; border: none; padding: 0; cursor: pointer;">Change Track</button>
+      </form>
+    </div>
     <!-- Assessment Card -->
+
     <div class="assessment-info-card glass-card">
       <div class="aic-header">
         <div class="aic-icon">📝</div>
@@ -167,6 +222,28 @@
     cb.addEventListener('change', () => {
       btn.disabled = !cb.checked;
     });
+  }
+
+  function selectTrackUI(track) {
+    document.getElementById('selectedTrackInput').value = track;
+
+    const cardIT = document.getElementById('trackCardIT');
+    const cardNonIT = document.getElementById('trackCardNonIT');
+
+    if (cardIT && cardNonIT) {
+      cardIT.classList.remove('selected');
+      cardNonIT.classList.remove('selected');
+      if (track === 'IT') {
+        cardIT.classList.add('selected');
+      } else {
+        cardNonIT.classList.add('selected');
+      }
+    }
+
+    const confirmBtn = document.getElementById('confirmTrackBtn');
+    if (confirmBtn) {
+      confirmBtn.disabled = false;
+    }
   }
 </script>
 {% endblock %}

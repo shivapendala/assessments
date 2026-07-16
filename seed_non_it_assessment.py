@@ -1,7 +1,7 @@
 """
 seed_non_it_assessment.py
-Creates and populates a second assessment with 20 high-quality questions mapped to the Non-IT JDs.
-Format: 20 questions in 20 minutes (5 Basic, 5 Core Non-IT, 5 Medium, 5 Hard).
+Creates and populates a second assessment with 20 basic questions for Non-IT roles.
+Format: 20 questions in 20 minutes.
 """
 import os
 from app import create_app
@@ -26,9 +26,9 @@ def seed_assessment():
         a = Assessment(
             title="Non-IT, Healthcare BPO & Operations Recruitment Drive",
             description=(
-                "Assessment containing Aptitude & Verbal, Medical Coding, Medical Billing, "
-                "Data Collection/Verification, AR & Telecalling, and Creative Content Creation. "
-                "Contains 20 questions graded from Basic to Hard difficulty. Time limit: 20 minutes."
+                "Assessment containing Aptitude & Verbal, Communication, Medical Billing Basics, "
+                "Data Entry, Customer Support, and General Knowledge. "
+                "Contains 20 basic questions. Time limit: 20 minutes."
             ),
             duration=20,
             pass_percentage=50.0,
@@ -38,185 +38,170 @@ def seed_assessment():
         db.session.commit()
 
         questions = [
-            # ─────────────────────────────────────────────────────────
-            # BASIC (5 Questions)
-            # ─────────────────────────────────────────────────────────
             {
-                "question": "Basic Excel: Which basic Excel formula should you enter to calculate the sum of values from cell B2 to B10?",
-                "option_a": "=ADD(B2:B10)",
-                "option_b": "=SUM(B2:B10)",
-                "option_c": "=TOTAL(B2:B10)",
-                "option_d": "=B2+B10",
+                "question": "Q1. What does BPO stand for?",
+                "option_a": "Business Process Outsourcing",
+                "option_b": "Business Plan Optimization",
+                "option_c": "Basic Process Operations",
+                "option_d": "Business Product Outsourcing",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q2. Which of the following is a correct email format?",
+                "option_a": "john.doe@gmail",
+                "option_b": "john.doe.gmail.com",
+                "option_c": "john.doe@gmail.com",
+                "option_d": "@john.doe.gmail.com",
+                "correct_answer": "C"
+            },
+            {
+                "question": "Q3. A patient's bill shows: Consultation ₹500, Lab Test ₹1200, Medicines ₹800. What is the total bill?",
+                "option_a": "₹2,300",
+                "option_b": "₹2,500",
+                "option_c": "₹2,100",
+                "option_d": "₹2,000",
                 "correct_answer": "B"
             },
             {
-                "question": "Basic Medical Terminology: In healthcare terminology, what does the suffix '-itis' represent when added to a medical term (e.g., Bronchitis, Arthritis)?",
-                "option_a": "Pain or headache",
-                "option_b": "Inflammation or swelling",
-                "option_c": "Cellular mutation",
-                "option_d": "Surgical removal",
+                "question": "Q4. What is the full form of OPD in healthcare?",
+                "option_a": "Out Patient Department",
+                "option_b": "Operational Patient Division",
+                "option_c": "Out Patient Discharge",
+                "option_d": "Optional Patient Data",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q5. Which Excel formula is used to calculate the sum of values from cells A1 to A10?",
+                "option_a": "=ADD(A1:A10)",
+                "option_b": "=TOTAL(A1:A10)",
+                "option_c": "=SUM(A1:A10)",
+                "option_d": "=A1+A10",
+                "correct_answer": "C"
+            },
+            {
+                "question": "Q6. What does 'AR' stand for in Medical Billing?",
+                "option_a": "Account Receivable",
+                "option_b": "Account Resolution",
+                "option_c": "Annual Report",
+                "option_d": "Active Record",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q7. A customer is angry on a call. What should you do first?",
+                "option_a": "Hang up the call",
+                "option_b": "Listen patiently and empathize",
+                "option_c": "Argue back and defend yourself",
+                "option_d": "Transfer the call immediately",
                 "correct_answer": "B"
             },
             {
-                "question": "Basic Telecalling: In BPO operations, what is the key difference between an Inbound call and an Outbound call?",
-                "option_a": "Inbound calls are made by the agent; Outbound calls are received by the agent.",
-                "option_b": "Inbound calls are received by the agent from customers; Outbound calls are initiated by the agent to customers.",
-                "option_c": "Inbound calls use internet lines; Outbound calls use satellite lines.",
-                "option_d": "There is no difference; they use the same scripts.",
+                "question": "Q8. Which of the following is NOT a common medical coding system?",
+                "option_a": "ICD-10",
+                "option_b": "CPT",
+                "option_c": "HCPCS",
+                "option_d": "PDF",
+                "correct_answer": "D"
+            },
+            {
+                "question": "Q9. If a data entry operator types 60 words per minute with 95% accuracy, how many correct words are typed in 10 minutes?",
+                "option_a": "570",
+                "option_b": "600",
+                "option_c": "540",
+                "option_d": "500",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q10. What is the correct way to address a patient/client over a professional call?",
+                "option_a": "Hey! What do you want?",
+                "option_b": "Good morning/afternoon! How may I help you?",
+                "option_c": "What is the problem?",
+                "option_d": "Call back later, we are busy.",
                 "correct_answer": "B"
             },
             {
-                "question": "Basic Social Media: An AI Vlogging Creator is formatting a vertical video for Instagram Reels and YouTube Shorts. What is the standard aspect ratio recommended for these platforms?",
-                "option_a": "16:9",
-                "option_b": "9:16",
-                "option_c": "1:1",
-                "option_d": "4:3",
-                "correct_answer": "B"
+                "question": "Q11. In a data collection form, which field must always be unique for each patient record?",
+                "option_a": "Date of Birth",
+                "option_b": "Patient Name",
+                "option_c": "Patient ID",
+                "option_d": "City",
+                "correct_answer": "C"
             },
             {
-                "question": "Basic Data Collection: During data collection, what is the best practice to follow when encountering incomplete or blurry documents during verification?",
-                "option_a": "Guess the missing digits to save processing time.",
-                "option_b": "Flag the document as invalid and request re-upload or verification.",
-                "option_c": "Delete the entry from the database permanently without logs.",
-                "option_d": "Accept it temporarily and process the record.",
-                "correct_answer": "B"
-            },
-
-            # ─────────────────────────────────────────────────────────
-            # CORE NON-IT (5 Questions)
-            # ─────────────────────────────────────────────────────────
-            {
-                "question": "Core Non-IT: What is the definition of an insurance 'Premium' in healthcare billing?",
-                "option_a": "The maximum amount the patient pays for a visit.",
-                "option_b": "The monthly or annual amount paid to the insurance company to keep the plan active.",
-                "option_c": "The penalty charged for late claims submission.",
-                "option_d": "A bonus paid to billing executives based on claim speed.",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Core Non-IT: Which keyboard shortcut allows you to quickly paste copied data in MS Excel on Windows?",
-                "option_a": "Ctrl + P",
+                "question": "Q12. Which key combination is used to copy selected text in a computer?",
+                "option_a": "Ctrl + X",
                 "option_b": "Ctrl + V",
-                "option_c": "Ctrl + Alt + V",
-                "option_d": "Ctrl + C",
+                "option_c": "Ctrl + C",
+                "option_d": "Ctrl + Z",
+                "correct_answer": "C"
+            },
+            {
+                "question": "Q13. If a claim is 'Denied' in medical billing, what is the next action?",
+                "option_a": "Delete the patient record",
+                "option_b": "Resubmit a corrected or appealed claim",
+                "option_c": "Bill the patient immediately",
+                "option_d": "Close the account",
                 "correct_answer": "B"
             },
             {
-                "question": "Core Non-IT: What is the main purpose of performing a 'KYC' (Know Your Customer) check during customer onboarding?",
-                "option_a": "To check customer reviews about the service.",
-                "option_b": "To verify the identity of the customer and prevent fraud or identity theft.",
-                "option_c": "To calculate the net salary income of the applicant.",
-                "option_d": "To document calling preferences.",
+                "question": "Q14. What does KPI stand for in operations/BPO?",
+                "option_a": "Key Process Implementation",
+                "option_b": "Key Performance Indicator",
+                "option_c": "Knowledge Process Interface",
+                "option_d": "Known Product Index",
                 "correct_answer": "B"
             },
             {
-                "question": "Core Non-IT: Which AI tool is primarily used for generating realistic images or design assets from text descriptions?",
-                "option_a": "ChatGPT",
-                "option_b": "Midjourney / DALL-E",
-                "option_c": "ElevenLabs",
-                "option_d": "GitHub Copilot",
+                "question": "Q15. Which of the following is an example of PHI (Protected Health Information)?",
+                "option_a": "A random medical textbook",
+                "option_b": "A patient's name combined with their diagnosis",
+                "option_c": "A general hospital brochure",
+                "option_d": "Publicly available hospital ratings",
                 "correct_answer": "B"
             },
             {
-                "question": "Core Non-IT: When a customer is angry during a call, what is the best strategy a Telecaller should adopt?",
-                "option_a": "Argue back to prove the company policy is correct.",
-                "option_b": "Listen patiently, apologize for the inconvenience, and offer a logical solution.",
-                "option_c": "Disconnect the call immediately.",
-                "option_d": "Transfer the call to another agent without warning.",
-                "correct_answer": "B"
+                "question": "Q16. In a typical night shift (10 PM – 6 AM), how many hours does an employee work?",
+                "option_a": "6 hours",
+                "option_b": "7 hours",
+                "option_c": "8 hours",
+                "option_d": "9 hours",
+                "correct_answer": "C"
             },
-
-            # ─────────────────────────────────────────────────────────
-            # MEDIUM (5 Questions)
-            # ─────────────────────────────────────────────────────────
             {
-                "question": "Medium Medical Coding: In medical coding, what is the primary difference between ICD codes and CPT codes?",
-                "option_a": "ICD codes are for procedures; CPT codes are for diagnoses.",
-                "option_b": "ICD codes classify diseases and diagnoses; CPT codes identify medical and procedural services performed.",
-                "option_c": "ICD codes are for billing; CPT codes are for pharmacy orders.",
-                "option_d": "There is no difference; they are released by the same agency.",
+                "question": "Q17. Which insurance program in the US primarily covers patients aged 65 and above?",
+                "option_a": "Medicaid",
+                "option_b": "Medicare",
+                "option_c": "COBRA",
+                "option_d": "BlueCross",
                 "correct_answer": "B"
             },
             {
-                "question": "Medium AR Calling: In Revenue Cycle Management (RCM), what does an 'EOB' (Explanation of Benefits) represent?",
-                "option_a": "A certificate issued to certified medical coders.",
-                "option_b": "A document sent by the insurance company explaining what was paid, denied, or adjusted on a claim.",
-                "option_c": "An employee handbook detailing call rules.",
-                "option_d": "A doctor's prescription layout.",
-                "correct_answer": "B"
+                "question": "Q18. If a medical claim is submitted after the deadline, it is called:",
+                "option_a": "Rejected claim",
+                "option_b": "Late claim",
+                "option_c": "Timely Filing Denial",
+                "option_d": "Invalid claim",
+                "correct_answer": "C"
             },
             {
-                "question": "Medium Excel: Which formula should you use to search for a value in the first column of a table array and return a value in the same row from another column?",
-                "option_a": "=INDEX(MATCH())",
-                "option_b": "=VLOOKUP()",
-                "option_c": "=LOOKUP()",
-                "option_d": "=HLOOKUP()",
-                "correct_answer": "B"
+                "question": "Q19. Which MS Office application is best suited for maintaining a patient appointment schedule?",
+                "option_a": "MS Paint",
+                "option_b": "MS Word",
+                "option_c": "MS Excel",
+                "option_d": "MS PowerPoint",
+                "correct_answer": "C"
             },
             {
-                "question": "Medium AI Handcam: In an AI gesture data collection project, why is it critical to collect hand movements from diverse angles and lighting conditions?",
-                "option_a": "To make the video content look more artistic.",
-                "option_b": "To ensure the AI model generalizes well and can recognize gestures in real-world scenarios.",
-                "option_c": "To decrease the dataset storage requirements.",
-                "option_d": "To bypass operating system camera limits.",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Medium Compliance: What is the main objective of the HIPAA regulation in US healthcare administration?",
-                "option_a": "To regulate the salary standards of hospital doctors.",
-                "option_b": "To protect patient medical records and other personal health information (PHI).",
-                "option_c": "To dictate insurance coverage premiums limits.",
-                "option_d": "To establish coding system updates schedules.",
-                "correct_answer": "B"
-            },
-
-            # ─────────────────────────────────────────────────────────
-            # HARD (5 Questions)
-            # ─────────────────────────────────────────────────────────
-            {
-                "question": "Hard Medical Coding: What is the purpose of adding a 'Modifier' to a CPT code during the medical coding process?",
-                "option_a": "To indicate the severity level of a patient's disease.",
-                "option_b": "To provide extra information indicating a procedure was altered or performed on a specific body part without changing the CPT definition.",
-                "option_c": "To change the payment tier to high-priority categories.",
-                "option_d": "To override diagnosis validation errors.",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Hard AR Calling: Which metric is the primary indicator of a billing team's efficiency in submitting clean, error-free claims to insurance companies?",
-                "option_a": "First-Pass Yield / Clean Claim Rate",
-                "option_b": "Average Hold Time (AHT)",
-                "option_c": "Net collection rate",
-                "option_d": "Outbound call count per agent",
-                "correct_answer": "A"
-            },
-            {
-                "question": "Hard Excel: Why is combining the `INDEX` and `MATCH` formulas often considered superior to using `VLOOKUP` alone in complex spreadsheets?",
-                "option_a": "VLOOKUP runs slower and cannot look left (prior columns) without rearranging the dataset.",
-                "option_b": "INDEX-MATCH does not require any parameters.",
-                "option_c": "VLOOKUP can only search for numerical values.",
-                "option_d": "INDEX-MATCH automatically sorts the rows.",
-                "correct_answer": "A"
-            },
-            {
-                "question": "Hard AI Vlogging: In scriptwriting using generative AI, which prompt engineering technique yields the most consistent tone and structured pacing for video reels?",
-                "option_a": "Broad single-sentence prompts with no constraints.",
-                "option_b": "Few-Shot prompting, providing a clear persona, target duration, and structural examples.",
-                "option_c": "Copy-pasting dictionary definitions.",
-                "option_d": "Using multiple languages inside the same prompt.",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Hard Medical Billing: In insurance verification, what does the term 'Coordination of Benefits' (COB) refer to?",
-                "option_a": "Coordinating scheduling between the patient and the physician.",
-                "option_b": "Determining the payment responsibilities and sequence when a patient is covered by more than one health insurance plan.",
-                "option_c": "Distributing commissions among billing department staff.",
-                "option_d": "Arranging coding updates across hospital branches.",
+                "question": "Q20. What is HIPAA primarily concerned with?",
+                "option_a": "Patient billing accuracy",
+                "option_b": "Privacy and security of patient health information",
+                "option_c": "Ensuring hospitals have enough staff",
+                "option_d": "Tracking hospital expenses",
                 "correct_answer": "B"
             }
         ]
 
-        # Insert questions
-        for idx, q_data in enumerate(questions, 1):
+        # Insert all 20 questions
+        for q_data in questions:
             q = Question(
                 assessment_id=a.id,
                 question=q_data["question"],
@@ -227,9 +212,9 @@ def seed_assessment():
                 correct_answer=q_data["correct_answer"]
             )
             db.session.add(q)
-        
+
         db.session.commit()
-        print("OK - Re-seeded Non-IT assessment 'Non-IT, Healthcare BPO & Operations Recruitment Drive' with 20 questions (20 min limit)!")
+        print("OK - Re-seeded Non-IT assessment 'Non-IT, Healthcare BPO & Operations Recruitment Drive' with 20 basic questions (20 min limit)!")
 
 if __name__ == '__main__':
     seed_assessment()
