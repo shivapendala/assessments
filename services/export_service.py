@@ -19,15 +19,21 @@ from models.models import Submission, db
 # Shared data fetcher
 # ─────────────────────────────────────────────
 
-def _get_results(search: str = '', assessment_id: int = None):
-    """Fetch all submissions with optional search filter."""
+def _get_results(search: str = '', assessment_id: int = None, status: str = None):
+    """Fetch all submissions with optional search and status filter."""
+    from sqlalchemy.orm import joinedload
     query = (
         db.session.query(Submission)
-        .join(Submission.candidate)
-        .join(Submission.assessment)
+        .options(
+            joinedload(Submission.candidate),
+            joinedload(Submission.assessment)
+        )
         .filter(Submission.status != 'in_progress')
         .order_by(Submission.submitted_at.desc())
     )
+
+    if status and status.lower() in ('pass', 'fail'):
+        query = query.filter(Submission.status == status.lower())
 
     if assessment_id:
         query = query.filter(Submission.assessment_id == assessment_id)
@@ -35,7 +41,7 @@ def _get_results(search: str = '', assessment_id: int = None):
     if search:
         from models.models import Candidate
         like = f'%{search}%'
-        query = query.filter(
+        query = query.join(Submission.candidate).filter(
             db.or_(
                 Candidate.full_name.ilike(like),
                 Candidate.hall_ticket.ilike(like),
@@ -72,9 +78,9 @@ def _row_data(sub: Submission):
 # CSV Export
 # ─────────────────────────────────────────────
 
-def export_csv(search: str = '', assessment_id: int = None):
+def export_csv(search: str = '', assessment_id: int = None, status: str = None):
     """Return a Flask Response with CSV attachment."""
-    submissions = _get_results(search, assessment_id)
+    submissions = _get_results(search, assessment_id, status)
 
     output = io.StringIO()
     writer = csv.writer(output)
@@ -85,7 +91,8 @@ def export_csv(search: str = '', assessment_id: int = None):
     content = output.getvalue()
     output.close()
 
-    filename = f'elevateiq_results_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
+    status_suffix = f'_{status.lower()}' if status and status.lower() in ('pass', 'fail') else ''
+    filename = f'elevateiq_results{status_suffix}_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
     response = make_response(content)
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     response.headers['Content-Type'] = 'text/csv; charset=utf-8'
@@ -96,9 +103,9 @@ def export_csv(search: str = '', assessment_id: int = None):
 # XLSX Export
 # ─────────────────────────────────────────────
 
-def export_xlsx(search: str = '', assessment_id: int = None):
+def export_xlsx(search: str = '', assessment_id: int = None, status: str = None):
     """Return a Flask Response with XLSX attachment."""
-    submissions = _get_results(search, assessment_id)
+    submissions = _get_results(search, assessment_id, status)
 
     wb = Workbook()
     ws = wb.active
@@ -120,7 +127,8 @@ def export_xlsx(search: str = '', assessment_id: int = None):
     # ── Title row ──────────────────────────
     ws.merge_cells('A1:J1')
     title_cell = ws['A1']
-    title_cell.value = f'ElevateIQ — Assessment Results Export  ({datetime.utcnow().strftime("%d %b %Y %H:%M UTC")})'
+    status_title = f' ({status.upper()} ONLY)' if status and status.lower() in ('pass', 'fail') else ''
+    title_cell.value = f'ElevateIQ — Assessment Results Export{status_title}  ({datetime.utcnow().strftime("%d %b %Y %H:%M UTC")})'
     title_cell.font = Font(bold=True, color='4C1D95', size=13)
     title_cell.fill = PatternFill('solid', fgColor='EDE9FE')
     title_cell.alignment = center
@@ -172,7 +180,8 @@ def export_xlsx(search: str = '', assessment_id: int = None):
     wb.save(output)
     output.seek(0)
 
-    filename = f'elevateiq_results_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    status_suffix = f'_{status.lower()}' if status and status.lower() in ('pass', 'fail') else ''
+    filename = f'elevateiq_results{status_suffix}_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.xlsx'
     response = make_response(output.getvalue())
     response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
     response.headers['Content-Type'] = (

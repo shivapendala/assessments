@@ -31,8 +31,7 @@
       <!-- Header -->
       <div class="result-header">
         <div class="cand-logo" style="justify-content:center; margin-bottom:8px;">
-          <div class="logo-icon-sm"><img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" /></div>
-          <span class="sidebar-brand">ElevateIQ</span>
+          <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" style="height: 38px; width: auto; object-fit: contain;" />
         </div>
         <h1 class="result-title">Assessment Complete</h1>
         <p class="result-subtitle">{{ assessment.title }}</p>

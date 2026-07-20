@@ -22,7 +22,7 @@ def get_dashboard_stats() -> dict:
     return _compute_dashboard_stats()
 
 
-@cache.cached(timeout=300, key_prefix='dashboard_stats')
+@cache.cached(timeout=60, key_prefix='dashboard_stats')
 def _compute_dashboard_stats() -> dict:
     # ── Query 1: candidates + assessments in one shot ─────────
     candidate_count = db.session.query(func.count(Candidate.id)).scalar() or 0
@@ -47,7 +47,7 @@ def _compute_dashboard_stats() -> dict:
     passed      = status_counts.get('pass', 0)
     failed      = status_counts.get('fail', 0)
     in_progress = status_counts.get('in_progress', 0)
-    total_attempts = passed + failed  # excludes in_progress (same as before)
+    total_attempts = passed + failed + in_progress
 
     return {
         'total_candidates':  candidate_count,
@@ -57,7 +57,7 @@ def _compute_dashboard_stats() -> dict:
         'passed':            passed,
         'failed':            failed,
         'in_progress':       in_progress,
-        'pass_rate': round((passed / total_attempts * 100) if total_attempts > 0 else 0, 1),
+        'pass_rate': round((passed / (passed + failed) * 100) if (passed + failed) > 0 else 0, 1),
     }
 
 

@@ -128,11 +128,11 @@ def dashboard():
             show_selection=True
         )
 
-    # Fetch corresponding assessment based on selected track
+    # Fetch corresponding active assessment based on selected track
     if selected_track == 'Non-IT':
-        assessment = Assessment.query.filter(Assessment.title.like('%Non-IT%')).first()
+        assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.like('%Non-IT%')).first()
     else:
-        assessment = Assessment.query.filter(Assessment.title.like('%IT%'), ~Assessment.title.like('%Non-IT%')).first()
+        assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.like('%IT%'), ~Assessment.title.like('%Non-IT%')).first()
 
     # Check if already attempted
     existing_submission = None
