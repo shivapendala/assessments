@@ -13,6 +13,14 @@ from config import get_config
 from models.models import db, Admin
 from extensions import cache
 
+# ── Patch psycopg2 for gevent non-blocking DB queries ──────────────────────
+try:
+    import gevent
+    import psycogreen.gevent
+    psycogreen.gevent.patch_psycopg()
+except Exception:
+    pass
+
 
 # ─── Extension instances ───────────────────────────────────────────────────
 login_manager = LoginManager()

@@ -62,25 +62,30 @@ def register():
             return render_template('candidate/register.html',
                                    full_name=full_name, email=email, hall_ticket=hall_ticket)
 
-        # Check uniqueness & allow login
-        existing_candidate = Candidate.query.filter_by(email=email).first()
-        if existing_candidate:
-            if existing_candidate.hall_ticket == hall_ticket:
-                # Purge any stale session data before logging in
+        # Single query check for existing candidate by email or hall ticket
+        matches = Candidate.query.filter(
+            db.or_(Candidate.email == email, Candidate.hall_ticket == hall_ticket)
+        ).all()
+
+        existing_by_email = next((c for c in matches if c.email == email), None)
+        existing_by_ht    = next((c for c in matches if c.hall_ticket == hall_ticket), None)
+
+        if existing_by_email:
+            if existing_by_email.hall_ticket == hall_ticket:
+                # Login existing student instantly
                 session.clear()
                 session.permanent = True
-                session['candidate_id'] = existing_candidate.id
-                session['candidate_name'] = existing_candidate.full_name
-                session['hall_ticket'] = existing_candidate.hall_ticket
-                flash(f'Welcome back, {existing_candidate.full_name}!', 'info')
+                session['candidate_id'] = existing_by_email.id
+                session['candidate_name'] = existing_by_email.full_name
+                session['hall_ticket'] = existing_by_email.hall_ticket
+                flash(f'Welcome back, {existing_by_email.full_name}!', 'info')
                 return redirect(url_for('candidate.dashboard'))
             else:
                 flash('This email is already registered with a different Hall Ticket.', 'danger')
                 return render_template('candidate/register.html',
                                        full_name=full_name, email=email, hall_ticket=hall_ticket)
 
-        existing_hall_ticket = Candidate.query.filter_by(hall_ticket=hall_ticket).first()
-        if existing_hall_ticket:
+        if existing_by_ht:
             flash('This Hall Ticket is already registered under a different email address.', 'danger')
             return render_template('candidate/register.html',
                                    full_name=full_name, email=email, hall_ticket=hall_ticket)
@@ -121,16 +126,17 @@ def register():
 @candidate_bp.route('/dashboard')
 @candidate_required
 def dashboard():
-    candidate = db.session.get(Candidate, session['candidate_id'])
+    candidate_id = session['candidate_id']
+    candidate = db.session.get(Candidate, candidate_id)
     if not candidate:
         session.clear()
         return redirect(url_for('candidate.register'))
 
-    # Force single attempt limit: redirect to results page if they have any completed submission
-    completed_sub = Submission.query.filter(
-        Submission.candidate_id == candidate.id,
-        Submission.status != 'in_progress'
-    ).first()
+    # Single query to fetch all submissions for this candidate (consolidates 2 queries into 1)
+    user_submissions = Submission.query.filter_by(candidate_id=candidate_id).all()
+
+    # Force single attempt limit: redirect to results page if completed
+    completed_sub = next((s for s in user_submissions if s.status != 'in_progress'), None)
     if completed_sub:
         return redirect(url_for('assessment.result', submission_id=completed_sub.id))
 
@@ -153,13 +159,10 @@ def dashboard():
     if not assessment and all_assessments:
         assessment = all_assessments[0]
 
-    # Check if already attempted
+    # Check if already attempted (from pre-fetched list — zero extra DB queries)
     existing_submission = None
     if assessment:
-        existing_submission = Submission.query.filter_by(
-            candidate_id=candidate.id,
-            assessment_id=assessment.id
-        ).first()
+        existing_submission = next((s for s in user_submissions if s.assessment_id == assessment.id), None)
 
     return render_template(
         'candidate/dashboard.html',
