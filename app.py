@@ -90,13 +90,20 @@ def create_app(config_class=None):
     def inject_globals():
         return {'app_name': 'ElevateIQ'}
 
-    # ── CLI Commands ───────────────────────────────────────────────────────
     @app.cli.command('init-db')
     def init_db():
-        """Create all database tables."""
+        """Create all database tables, seed default admin and assessment drives."""
         with app.app_context():
             db.create_all()
-            print('OK - Database tables created.')
+            _create_default_admin(app)
+            try:
+                from seed_jd_assessment import seed_assessment as seed_it
+                from seed_non_it_assessment import seed_assessment as seed_non_it
+                seed_it()
+                seed_non_it()
+            except Exception as e:
+                print(f"Seeding notice: {e}")
+            print('OK - Database initialized, admin created, and assessments seeded!')
 
     @app.cli.command('create-admin')
     def create_admin_cmd():

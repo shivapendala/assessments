@@ -64,22 +64,19 @@ def fix_database_uri(uri: str) -> str:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    SQLALCHEMY_DATABASE_URI = fix_database_uri(
-        os.environ.get('DATABASE_URL')
-    ) or 'sqlite:///elevateiq_dev.db'
+    _custom_url = os.environ.get('ASSESSMENT_DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(_custom_url) if _custom_url else 'sqlite:///elevateiq_assessments.db'
     SESSION_COOKIE_SECURE = False
     WTF_CSRF_ENABLED = True
-
-    # SQLite doesn't need pool config; PostgreSQL uses engine options to pool SSL connections
-    SQLALCHEMY_ENGINE_OPTIONS = {} if not os.environ.get('DATABASE_URL') else engine_options
+    SQLALCHEMY_ENGINE_OPTIONS = engine_options if _custom_url and ('postgres' in _custom_url or 'pg8000' in _custom_url) else {}
 
 
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
-    SQLALCHEMY_DATABASE_URI = fix_database_uri(
-        os.environ.get('DATABASE_URL')
-    ) or 'sqlite:///elevateiq_prod.db'
+    _custom_url = os.environ.get('ASSESSMENT_DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(_custom_url) if _custom_url else 'sqlite:///elevateiq_assessments.db'
+    SQLALCHEMY_ENGINE_OPTIONS = engine_options if _custom_url and ('postgres' in _custom_url or 'pg8000' in _custom_url) else {}
 
 
 class TestingConfig(Config):
