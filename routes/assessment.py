@@ -265,6 +265,12 @@ def submit():
         flash('Submission not found.', 'danger')
         return redirect(url_for('candidate.dashboard'))
 
+    # Security check: candidate in session MUST match submission candidate
+    if submission.candidate_id != session.get('candidate_id'):
+        session.clear()
+        flash('Session mismatch detected. Please register or log in again.', 'danger')
+        return redirect(url_for('candidate.register'))
+
     if submission.status != 'in_progress':
         # Already submitted
         return redirect(url_for('assessment.result', submission_id=submission.id))

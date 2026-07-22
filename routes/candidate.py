@@ -25,8 +25,11 @@ def index():
 
 @candidate_bp.route('/register', methods=['GET', 'POST'])
 def register():
-    # If candidate already in session, go to dashboard
-    if 'candidate_id' in session:
+    if request.args.get('logout') == '1':
+        session.clear()
+
+    # If candidate already in session on GET request, redirect to dashboard unless switching accounts
+    if request.method == 'GET' and 'candidate_id' in session and not request.args.get('switch'):
         return redirect(url_for('candidate.dashboard'))
 
     if request.method == 'POST':
@@ -52,7 +55,8 @@ def register():
         existing_candidate = Candidate.query.filter_by(email=email).first()
         if existing_candidate:
             if existing_candidate.hall_ticket == hall_ticket:
-                # Log them in and redirect to dashboard
+                # Purge any stale session data before logging in
+                session.clear()
                 session.permanent = True
                 session['candidate_id'] = existing_candidate.id
                 session['candidate_name'] = existing_candidate.full_name
@@ -86,7 +90,8 @@ def register():
             db.session.add(candidate)
             db.session.commit()
 
-            # Store in session
+            # Purge any stale session data before setting new session
+            session.clear()
             session.permanent = True
             session['candidate_id'] = candidate.id
             session['candidate_name'] = candidate.full_name
