@@ -12,10 +12,4 @@ Jinja2==3.1.4
 alembic==1.13.3
 Flask-Migrate==4.0.7
 Flask-Caching==2.4.1
-pg8000==1.31.5
-
-# ── Production only (Linux server) ────────────────────────────
-# Install these on your Ubuntu VPS for Gunicorn + PostgreSQL:
-# gunicorn==22.0.0
-# gevent==24.2.1
-# greenlet==3.1.1
+psycopg2-binary==2.9.9
