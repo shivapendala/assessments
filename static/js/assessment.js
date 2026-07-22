@@ -363,8 +363,10 @@ async function doSubmit() {
   localStorage.removeItem(LS_KEY_TIMER);
   localStorage.removeItem(LS_KEY_ANSWERS);
 
-  // Fire unsaved answer flush asynchronously (non-blocking) & submit immediately
-  flushAnswersToServer().catch(() => {});
+  // Flush all pending answers in 1 bulk query before submitting
+  try {
+    await flushAnswersToServer();
+  } catch (_) {}
 
   // Instant Submit
   document.getElementById('submitForm').submit();

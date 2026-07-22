@@ -179,41 +179,41 @@ def save_answer():
         return api_error('Missing answer data.', 400)
 
     try:
-        # Detect if we're on PostgreSQL for upsert, otherwise use ORM fallback
-        is_postgres = 'postgresql' in str(db.engine.url)
-
+        # Prepare list of records for bulk multi-row upsert
+        records = []
         for q_id_str, selected_option in answers_to_save.items():
             try:
                 question_id = int(q_id_str)
             except (ValueError, TypeError):
                 continue
 
-            if selected_option not in ('A', 'B', 'C', 'D', None):
-                continue
+            if selected_option in ('A', 'B', 'C', 'D', None):
+                records.append({
+                    'submission_id': submission_id,
+                    'question_id': question_id,
+                    'selected_option': selected_option
+                })
 
+        if records:
+            is_postgres = 'postgresql' in str(db.engine.url)
             if is_postgres:
-                stmt = pg_insert(Answer).values(
-                    submission_id=submission_id,
-                    question_id=question_id,
-                    selected_option=selected_option,
-                ).on_conflict_do_update(
+                # Single multi-row bulk upsert query (1 SQL statement instead of N statements)
+                stmt = pg_insert(Answer).values(records)
+                stmt = stmt.on_conflict_do_update(
                     constraint='uq_assessment_submission_question',
-                    set_={'selected_option': selected_option}
+                    set_={'selected_option': stmt.excluded.selected_option}
                 )
                 db.session.execute(stmt)
             else:
-                existing = Answer.query.filter_by(
-                    submission_id=submission_id,
-                    question_id=question_id
-                ).first()
-                if existing:
-                    existing.selected_option = selected_option
-                else:
-                    db.session.add(Answer(
-                        submission_id=submission_id,
-                        question_id=question_id,
-                        selected_option=selected_option
-                    ))
+                for r in records:
+                    existing = Answer.query.filter_by(
+                        submission_id=r['submission_id'],
+                        question_id=r['question_id']
+                    ).first()
+                    if existing:
+                        existing.selected_option = r['selected_option']
+                    else:
+                        db.session.add(Answer(**r))
 
         db.session.commit()
     except Exception as err:
