@@ -11,7 +11,8 @@ def seed_assessment():
     app = create_app()
     with app.app_context():
         # Delete existing IT assessment, submissions, answers and questions to start fresh
-        it_assessments = Assessment.query.filter(Assessment.title.contains('IT'), ~Assessment.title.contains('Non-IT')).all()
+        all_a = Assessment.query.all()
+        it_assessments = [a for a in all_a if 'IT' in a.title and 'Non-IT' not in a.title]
         for old_a in it_assessments:
             subs = Submission.query.filter_by(assessment_id=old_a.id).all()
             for sub in subs:

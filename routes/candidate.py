@@ -128,11 +128,14 @@ def dashboard():
             show_selection=True
         )
 
-    # Fetch corresponding active assessment based on selected track
+    # Fetch corresponding active assessment based on selected track safely
+    all_assessments = Assessment.query.filter_by(status='active').all()
     if selected_track == 'Non-IT':
-        assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.contains('Non-IT')).first()
+        assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
     else:
-        assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.contains('IT'), ~Assessment.title.contains('Non-IT')).first()
+        assessment = next((a for a in all_assessments if 'IT' in a.title and 'Non-IT' not in a.title), None)
+    if not assessment and all_assessments:
+        assessment = all_assessments[0]
 
     # Check if already attempted
     existing_submission = None

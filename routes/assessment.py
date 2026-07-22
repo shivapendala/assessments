@@ -42,10 +42,13 @@ def start():
         return redirect(url_for('candidate.register'))
 
     selected_track = session.get('selected_track', 'IT')
+    all_assessments = Assessment.query.filter_by(status='active').all()
     if selected_track == 'Non-IT':
-        active_assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.contains('Non-IT')).first()
+        active_assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
     else:
-        active_assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.contains('IT'), ~Assessment.title.contains('Non-IT')).first()
+        active_assessment = next((a for a in all_assessments if 'IT' in a.title and 'Non-IT' not in a.title), None)
+    if not active_assessment and all_assessments:
+        active_assessment = all_assessments[0]
 
     if not active_assessment:
         flash('The selected assessment is currently not available.', 'warning')
