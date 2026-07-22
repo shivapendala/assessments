@@ -8,9 +8,9 @@ bind = os.environ.get('BIND', '0.0.0.0:8000')
 # ── Workers ──────────────────────────────────────────────────
 # Rule of thumb: (2 × CPU cores) + 1
 workers = int(os.environ.get('WORKERS', multiprocessing.cpu_count() * 2 + 1))
-worker_class = 'gevent'          # async workers for concurrent connections
-worker_connections = 1000        # max simultaneous connections per worker
-threads = 2
+worker_class = 'sync'          # sync workers for python 3.12 compatibility
+worker_connections = 1000
+threads = 4
 
 # ── Max Requests (prevents memory leaks in long-running workers) ─────────────
 # Workers are recycled after this many requests (+ random jitter to avoid
