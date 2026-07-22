@@ -29,7 +29,11 @@ def _get_results(search: str = '', assessment_id: int = None, status: str = None
             joinedload(Submission.assessment)
         )
         .filter(Submission.status != 'in_progress')
-        .order_by(Submission.submitted_at.desc())
+        .order_by(
+            Submission.percentage.desc(),
+            Submission.score.desc(),
+            Submission.submitted_at.desc()
+        )
     )
 
     if status and status.lower() in ('pass', 'fail'):

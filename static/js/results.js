@@ -48,7 +48,8 @@
 // ── Table Sort ────────────────────────────────────────────────
 (function initTableSort() {
   document.querySelectorAll('th.sortable').forEach(th => {
-    let dir = 1;
+    // Default score and percentage to descending order (-1) on first click
+    let dir = (th.dataset.col === 'score' || th.dataset.col === 'pct') ? -1 : 1;
     th.style.cursor = 'pointer';
     th.addEventListener('click', () => {
       const table = th.closest('table');
@@ -66,13 +67,13 @@
         return dir * av.localeCompare(bv);
       });
 
-      dir *= -1;
       rows.forEach(r => tbody.appendChild(r));
 
       table.querySelectorAll('th.sortable').forEach(t => {
         t.textContent = t.textContent.replace(/\s[↑↓↕]$/, '') + ' ↕';
       });
-      th.textContent = th.textContent.replace(/\s[↑↓↕]$/, '') + (dir === -1 ? ' ↑' : ' ↓');
+      th.textContent = th.textContent.replace(/\s[↑↓↕]$/, '') + (dir === -1 ? ' ↓' : ' ↑');
+      dir *= -1;
     });
   });
 })();

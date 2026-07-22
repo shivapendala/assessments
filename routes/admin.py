@@ -297,7 +297,11 @@ def results():
     if status in ('pass', 'fail'):
         query = query.filter(Submission.status == status)
 
-    query = query.order_by(Submission.submitted_at.desc())
+    query = query.order_by(
+        Submission.percentage.desc(),
+        Submission.score.desc(),
+        Submission.submitted_at.desc()
+    )
 
     if search:
         from models.models import Candidate as Cand

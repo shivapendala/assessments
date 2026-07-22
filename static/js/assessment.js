@@ -188,18 +188,27 @@ function renderQuestion(index) {
   const progressPct = ((index + 1) / totalQ * 100).toFixed(1);
   document.getElementById('progressFill').style.width = progressPct + '%';
 
-  // Build HTML
+  // Build HTML (supporting jumbled options)
   const optionLetters = ['A', 'B', 'C', 'D'];
-  const optionTexts   = [q.option_a, q.option_b, q.option_c, q.option_d];
+  const rawOpts = q.options || [
+    { key: 'A', text: q.option_a },
+    { key: 'B', text: q.option_b },
+    { key: 'C', text: q.option_c },
+    { key: 'D', text: q.option_d }
+  ];
 
-  const optionsHTML = optionLetters.map((letter, i) => `
-    <div class="option-item ${savedOpt === letter ? 'selected' : ''}"
-         id="opt-${letter}" data-letter="${letter}"
-         onclick="selectOption(${q.id}, '${letter}', this)">
-      <span class="opt-key">${letter}</span>
-      <span class="opt-text">${escapeHtml(optionTexts[i])}</span>
-    </div>
-  `).join('');
+  const optionsHTML = rawOpts.map((opt, i) => {
+    const displayLabel = optionLetters[i];
+    const isSelected = (savedOpt === opt.key);
+    return `
+      <div class="option-item ${isSelected ? 'selected' : ''}"
+           id="opt-${opt.key}" data-letter="${opt.key}"
+           onclick="selectOption(${q.id}, '${opt.key}', this)">
+        <span class="opt-key">${displayLabel}</span>
+        <span class="opt-text">${escapeHtml(opt.text)}</span>
+      </div>
+    `;
+  }).join('');
 
   document.getElementById('questionContent').innerHTML = `
     <span class="question-num">Question ${index + 1} of ${totalQ}</span>

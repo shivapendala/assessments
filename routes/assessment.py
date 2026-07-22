@@ -113,10 +113,10 @@ def engine():
 
     questions = Question.query.filter_by(assessment_id=assessment_id).order_by(Question.id).all()
     
-    # Shuffle deterministically per candidate to prevent cheating while maintaining reload consistency
+    # Jumble question order deterministically per candidate session (thread-safe)
     import random
-    random.seed(candidate.id)
-    random.shuffle(questions)
+    rng = random.Random(f"sub_{submission_id}_cand_{candidate.id}")
+    rng.shuffle(questions)
 
     # Load saved answers for this submission
     saved_answers = {
@@ -124,7 +124,20 @@ def engine():
         for a in Answer.query.filter_by(submission_id=submission_id).all()
     }
 
-    questions_data = [q.to_dict() for q in questions]
+    # Build questions_data with jumbled options for each question
+    questions_data = []
+    for q in questions:
+        q_dict = q.to_dict()
+        opts = [
+            {'key': 'A', 'text': q.option_a},
+            {'key': 'B', 'text': q.option_b},
+            {'key': 'C', 'text': q.option_c},
+            {'key': 'D', 'text': q.option_d},
+        ]
+        q_rng = random.Random(f"sub_{submission_id}_q_{q.id}")
+        q_rng.shuffle(opts)
+        q_dict['options'] = opts
+        questions_data.append(q_dict)
 
     return render_template(
         'candidate/assessment.html',
