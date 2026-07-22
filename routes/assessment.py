@@ -3,6 +3,7 @@ ElevateIQ — Assessment Blueprint
 Handles: assessment start, engine page, auto-save, violations,
          submission, and result display.
 """
+import random
 from datetime import datetime
 from flask import (
     Blueprint, render_template, redirect, url_for,
