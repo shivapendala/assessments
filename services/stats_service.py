@@ -25,9 +25,16 @@ def get_dashboard_stats() -> dict:
 @cache.cached(timeout=60, key_prefix='dashboard_stats')
 def _compute_dashboard_stats() -> dict:
     try:
+        # Single query for candidate count + assessment counts (was 3 separate queries)
+        from sqlalchemy import case, literal_column
+        counts = db.session.query(
+            func.count(Assessment.id).label('total_assessments'),
+            func.count(case((Assessment.status == 'active', 1))).label('active_assessments'),
+        ).first()
+        total_assessments = counts.total_assessments or 0
+        active_assessments = counts.active_assessments or 0
+
         candidate_count = db.session.query(func.count(Candidate.id)).scalar() or 0
-        total_assessments = db.session.query(func.count(Assessment.id)).scalar() or 0
-        active_assessments = db.session.query(func.count(Assessment.id)).filter(Assessment.status == 'active').scalar() or 0
 
         status_rows = (
             db.session.query(

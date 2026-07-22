@@ -83,24 +83,33 @@ def _row_data(sub: Submission):
 # ─────────────────────────────────────────────
 
 def export_csv(search: str = '', assessment_id: int = None, status: str = None):
-    """Return a Flask Response with CSV attachment."""
-    submissions = _get_results(search, assessment_id, status)
+    """Return a Flask streaming Response with CSV attachment."""
+    from flask import Response
 
-    output = io.StringIO()
-    writer = csv.writer(output)
-    writer.writerow(HEADERS)
-    for sub in submissions:
-        writer.writerow(_row_data(sub))
+    def generate():
+        # Write header
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(HEADERS)
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
 
-    content = output.getvalue()
-    output.close()
+        # Stream rows
+        submissions = _get_results(search, assessment_id, status)
+        for sub in submissions:
+            writer.writerow(_row_data(sub))
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
 
     status_suffix = f'_{status.lower()}' if status and status.lower() in ('pass', 'fail') else ''
     filename = f'elevateiq_results{status_suffix}_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
-    response = make_response(content)
-    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
-    response.headers['Content-Type'] = 'text/csv; charset=utf-8'
-    return response
+    return Response(
+        generate(),
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'},
+    )
 
 
 # ─────────────────────────────────────────────

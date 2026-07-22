@@ -12,9 +12,10 @@ from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from models.models import db, Admin, Assessment, Question, Submission, Candidate
-from services.stats_service import get_dashboard_stats, get_recent_results
+from services.stats_service import get_dashboard_stats
 from services.export_service import export_csv, export_xlsx
 from utils.helpers import sanitize_string, api_success, api_error, paginate_query
+from sqlalchemy import func
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 
@@ -70,22 +71,17 @@ def logout():
 def dashboard():
     try:
         stats = get_dashboard_stats()
-        passed_results = (
+        # Single query for both passed and failed, split in Python
+        recent_results = (
             db.session.query(Submission)
             .options(joinedload(Submission.candidate))
-            .filter_by(status='pass')
+            .filter(Submission.status.in_(['pass', 'fail']))
             .order_by(Submission.submitted_at.desc())
-            .limit(10)
+            .limit(20)
             .all()
         )
-        failed_results = (
-            db.session.query(Submission)
-            .options(joinedload(Submission.candidate))
-            .filter_by(status='fail')
-            .order_by(Submission.submitted_at.desc())
-            .limit(10)
-            .all()
-        )
+        passed_results = [r for r in recent_results if r.status == 'pass'][:10]
+        failed_results = [r for r in recent_results if r.status == 'fail'][:10]
         assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(10).all()
         return render_template(
             'admin/dashboard.html',
@@ -112,8 +108,26 @@ def dashboard():
 @admin_bp.route('/assessments')
 @login_required
 def assessments():
-    all_assessments = Assessment.query.order_by(Assessment.created_at.desc()).all()
-    return render_template('admin/assessments.html', assessments=all_assessments)
+    # Annotate question_count via subquery to avoid N+1
+    q_count_subq = (
+        db.session.query(
+            Question.assessment_id,
+            func.count(Question.id).label('q_count')
+        )
+        .group_by(Question.assessment_id)
+        .subquery()
+    )
+    all_assessments = (
+        db.session.query(Assessment, q_count_subq.c.q_count)
+        .outerjoin(q_count_subq, Assessment.id == q_count_subq.c.assessment_id)
+        .order_by(Assessment.created_at.desc())
+        .all()
+    )
+    # Attach the count so templates/to_dict can access it
+    for assessment, q_count in all_assessments:
+        assessment._question_count = q_count or 0
+    assessment_list = [a for a, _ in all_assessments]
+    return render_template('admin/assessments.html', assessments=assessment_list)
 
 
 @admin_bp.route('/assessments/create', methods=['POST'])

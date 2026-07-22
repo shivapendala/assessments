@@ -38,7 +38,7 @@
 ">
   <!-- Clean Logo -->
   <div style="display: flex; align-items: center; justify-content: center; max-width: 280px; height: 60px;">
-    <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 16px rgba(139,92,246,0.3));" />
+    <span style="font-size: 24px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em;">ElevateIQ</span>
   </div>
 
   <!-- Spinner -->
@@ -218,5 +218,5 @@
 {% endblock %}
 
 {% block scripts %}
-<script src="{{ url_for('static', filename='js/assessment.js') }}"></script>
+<script defer src="{{ url_for('static', filename='js/assessment.js') }}"></script>
 {% endblock %}

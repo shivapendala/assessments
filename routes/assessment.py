@@ -112,12 +112,13 @@ def engine():
     assessment = db.session.get(Assessment, assessment_id)
     candidate = db.session.get(Candidate, session['candidate_id'])
 
-    questions = Question.query.filter_by(assessment_id=assessment_id).order_by(Question.id).all()
+    # Use cached questions instead of a fresh DB query
+    questions = _get_cached_questions(assessment_id)
     
     # Jumble question order deterministically per candidate session (thread-safe)
-    import random
     rng = random.Random(f"sub_{submission_id}_cand_{candidate.id}")
-    rng.shuffle(questions)
+    shuffled_questions = list(questions)  # copy to avoid mutating cache
+    rng.shuffle(shuffled_questions)
 
     # Load saved answers for this submission
     saved_answers = {
@@ -127,7 +128,7 @@ def engine():
 
     # Build questions_data with jumbled options for each question
     questions_data = []
-    for q in questions:
+    for q in shuffled_questions:
         q_dict = q.to_dict()
         opts = [
             {'key': 'A', 'text': q.option_a},
@@ -143,7 +144,7 @@ def engine():
     return render_template(
         'candidate/assessment.html',
         assessment=assessment,
-        questions=questions,
+        questions=shuffled_questions,
         questions_data=questions_data,
         saved_answers=saved_answers,
         submission=submission,
@@ -177,6 +178,9 @@ def save_answer():
         return api_error('Missing answer data.', 400)
 
     try:
+        # Detect if we're on PostgreSQL for upsert, otherwise use ORM fallback
+        is_postgres = 'postgresql' in str(db.engine.url)
+
         for q_id_str, selected_option in answers_to_save.items():
             try:
                 question_id = int(q_id_str)
@@ -186,7 +190,7 @@ def save_answer():
             if selected_option not in ('A', 'B', 'C', 'D', None):
                 continue
 
-            try:
+            if is_postgres:
                 stmt = pg_insert(Answer).values(
                     submission_id=submission_id,
                     question_id=question_id,
@@ -196,8 +200,7 @@ def save_answer():
                     set_={'selected_option': selected_option}
                 )
                 db.session.execute(stmt)
-            except Exception:
-                db.session.rollback()
+            else:
                 existing = Answer.query.filter_by(
                     submission_id=submission_id,
                     question_id=question_id

@@ -3,7 +3,7 @@ ElevateIQ — SQLAlchemy ORM Models
 All database tables with proper indexes, relationships, and constraints.
 """
 from datetime import datetime
-from sqlalchemy import func
+from sqlalchemy import func, select
 from flask_sqlalchemy import SQLAlchemy
 from flask_login import UserMixin
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -46,7 +46,7 @@ class Candidate(db.Model):
 
     # Relationships
     submissions = db.relationship(
-        'Submission', backref='candidate', lazy='dynamic',
+        'Submission', backref='candidate', lazy='select',
         cascade='all, delete-orphan'
     )
 
@@ -88,7 +88,13 @@ class Assessment(db.Model):
 
     @property
     def question_count(self):
-        """Cached count via subquery — avoids N+1 per-row COUNT calls."""
+        """Return annotated count if available (from joinedload/subquery),
+        otherwise fall back to a single COUNT query."""
+        # If the query annotated _question_count, use it (zero SQL)
+        annotated = getattr(self, '_question_count', None)
+        if annotated is not None:
+            return annotated
+        # Fallback: single query (only used in .to_dict() edge cases)
         return db.session.query(func.count(Question.id)).filter(
             Question.assessment_id == self.id
         ).scalar() or 0

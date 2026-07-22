@@ -286,14 +286,36 @@ function navigateTo(index) {
 
 
 // ── Nav Grid Update ──────────────────────────────────────────
+let _prevNavIndex = -1;
 function updateNavGrid() {
+  // Targeted update: only change the previous and current buttons
+  if (_prevNavIndex >= 0 && _prevNavIndex !== currentQuestion) {
+    const prevBtn = document.getElementById(`nav-${_prevNavIndex}`);
+    if (prevBtn) {
+      prevBtn.className = 'nav-btn';
+      const prevQ = QUESTIONS[_prevNavIndex];
+      if (prevQ && answers[prevQ.id]) prevBtn.classList.add('nav-answered');
+    }
+  }
+  // Update current button
+  const curBtn = document.getElementById(`nav-${currentQuestion}`);
+  if (curBtn) {
+    curBtn.className = 'nav-btn nav-current';
+  }
+  // Update any newly answered buttons (check all — lightweight DOM reads)
   QUESTIONS.forEach((q, i) => {
+    if (i === currentQuestion) return;
     const btn = document.getElementById(`nav-${i}`);
     if (!btn) return;
-    btn.className = 'nav-btn';
-    if (i === currentQuestion)     btn.classList.add('nav-current');
-    else if (answers[q.id])        btn.classList.add('nav-answered');
+    const hasAnswer = !!answers[q.id];
+    const isMarked = btn.classList.contains('nav-answered');
+    if (hasAnswer && !isMarked) {
+      btn.className = 'nav-btn nav-answered';
+    } else if (!hasAnswer && isMarked) {
+      btn.className = 'nav-btn';
+    }
   });
+  _prevNavIndex = currentQuestion;
 }
 
 function updateSummaryCount() {
@@ -372,11 +394,9 @@ async function autoSubmit(reason) {
   localStorage.removeItem(LS_KEY_TIMER);
   localStorage.removeItem(LS_KEY_ANSWERS);
 
-  // Save all pending answers
+  // Save all pending answers in one bulk request
   try {
-    await Promise.allSettled(
-      QUESTIONS.map(q => saveAnswer(q.id, answers[q.id] || null))
-    );
+    await flushAnswersToServer();
   } catch (_) {}
 
   document.getElementById('submitForm').submit();
@@ -490,14 +510,10 @@ function escapeHtml(str) {
   return div.innerHTML;
 }
 
-// Periodic full-state sync to server (every 30s)
+// Periodic full-state sync to server (every 30s) — single bulk request
 setInterval(() => {
   if (isSubmitting) return;
-  QUESTIONS.forEach(q => {
-    if (answers[q.id] !== undefined) {
-      saveAnswer(q.id, answers[q.id] || null);
-    }
-  });
+  flushAnswersToServer();
 }, 30000);
 
 // Save on window unload / beforeunload

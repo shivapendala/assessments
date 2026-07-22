@@ -8,7 +8,7 @@ bind = os.environ.get('BIND', '0.0.0.0:8000')
 # ── Workers ──────────────────────────────────────────────────
 # Rule of thumb: (2 × CPU cores) + 1
 workers = int(os.environ.get('WORKERS', multiprocessing.cpu_count() * 2 + 1))
-worker_class = 'sync'          # sync workers for python 3.12 compatibility
+worker_class = 'gthread'       # gthread workers handle concurrent I/O via threads
 worker_connections = 1000
 threads = 4
 
