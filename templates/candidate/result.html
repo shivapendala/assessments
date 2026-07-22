@@ -50,27 +50,27 @@
       <!-- Score Ring -->
       <div class="score-ring-wrapper">
         {% set pct = submission.percentage | round(1) %}
-        {% set circumference = 251.2 %}
+        {% set circumference = 439.82 %}
         {% set fill = [[(pct / 100 * circumference), 0] | max, circumference] | min %}
-        <svg class="score-ring" width="180" height="180" viewBox="0 0 180 180">
+        <svg class="score-ring" width="200" height="200" viewBox="0 0 180 180">
           <!-- Background circle -->
-          <circle cx="90" cy="90" r="80" fill="none" stroke="rgba(255,255,255,0.06)" stroke-width="12"/>
+          <circle cx="90" cy="90" r="70" fill="none" stroke="#e2e8f0" stroke-width="12"/>
           <!-- Progress circle -->
           <circle
-            cx="90" cy="90" r="80"
+            cx="90" cy="90" r="70"
             fill="none"
             stroke="{% if submission.status == 'pass' %}#10b981{% else %}#ef4444{% endif %}"
             stroke-width="12"
             stroke-linecap="round"
-            stroke-dasharray="{{ circumference }}"
-            stroke-dashoffset="{{ circumference - fill }}"
+            stroke-dasharray="439.82"
+            stroke-dashoffset="{{ 439.82 - fill }}"
             transform="rotate(-90 90 90)"
             class="ring-progress"
           />
           <!-- Inner text -->
-          <text x="90" y="78" text-anchor="middle" fill="#f1f5f9" font-size="32" font-weight="800" font-family="Inter,sans-serif">{{ submission.score }}</text>
-          <text x="90" y="100" text-anchor="middle" fill="#94a3b8" font-size="14" font-family="Inter,sans-serif">out of {{ submission.total_questions }}</text>
-          <text x="90" y="122" text-anchor="middle" fill="{% if submission.status == 'pass' %}#10b981{% else %}#ef4444{% endif %}" font-size="18" font-weight="700" font-family="Inter,sans-serif">{{ pct }}%</text>
+          <text x="90" y="74" text-anchor="middle" fill="#0f172a" font-size="38" font-weight="800" font-family="Inter,sans-serif">{{ submission.score }}</text>
+          <text x="90" y="96" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" font-family="Inter,sans-serif">out of {{ submission.total_questions }}</text>
+          <text x="90" y="120" text-anchor="middle" fill="{% if submission.status == 'pass' %}#047857{% else %}#ef4444{% endif %}" font-size="18" font-weight="800" font-family="Inter,sans-serif">{{ pct }}%</text>
         </svg>
 
         <!-- PASS / FAIL Badge -->
@@ -107,13 +107,17 @@
         </div>
       </div>
 
-      <!-- Pass threshold info -->
-      <div class="pass-info">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/></svg>
-        Pass threshold was <strong>{{ assessment.pass_percentage }}%</strong>.
-        You scored <strong>{{ "%.2f"|format(submission.percentage) }}%</strong>.
+      <!-- Pass threshold & score summary -->
+      <div class="pass-info" style="display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; padding:16px;">
+        <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center;">
+          <span>Pass Threshold: <strong>{{ assessment.pass_percentage }}%</strong></span>
+          <span style="color:var(--text-faint);">•</span>
+          <span>Your Score: <strong>{{ "%.2f"|format(submission.percentage) }}%</strong></span>
+        </div>
         {% if submission.submitted_at_ist %}
-        Submitted at {{ submission.submitted_at_ist.strftime('%d %b %Y, %I:%M %p') }} IST.
+        <div style="font-size:12px; color:var(--text-muted);">
+          Submitted on {{ submission.submitted_at_ist.strftime('%d %b %Y at %I:%M %p') }} IST
+        </div>
         {% endif %}
       </div>
 
@@ -145,7 +149,7 @@
     if (ring) {
       const dashoffset = ring.getAttribute('stroke-dashoffset');
       ring.style.transition = 'none';
-      ring.setAttribute('stroke-dashoffset', 251.2);
+      ring.setAttribute('stroke-dashoffset', 439.82);
       setTimeout(() => {
         ring.style.transition = 'stroke-dashoffset 1.5s cubic-bezier(0.4, 0, 0.2, 1)';
         ring.setAttribute('stroke-dashoffset', dashoffset);
