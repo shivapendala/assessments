@@ -9,12 +9,23 @@ from flask import (
     flash, request, session, jsonify
 )
 from sqlalchemy import func
+from sqlalchemy.orm import joinedload
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
 from models.models import db, Assessment, Question, Submission, Answer, Candidate
 from utils.helpers import candidate_required, assessment_session_required, api_success, api_error
 
 assessment_bp = Blueprint('assessment', __name__, url_prefix='/assessment')
+
+
+def _get_cached_questions(assessment_id: int):
+    from extensions import cache
+    cache_key = f'questions_assessment_{assessment_id}'
+    questions = cache.get(cache_key)
+    if questions is None:
+        questions = Question.query.filter_by(assessment_id=assessment_id).order_by(Question.id).all()
+        cache.set(cache_key, questions, timeout=300)
+    return questions
 
 
 # ─────────────────────────────────────────────
@@ -32,9 +43,9 @@ def start():
 
     selected_track = session.get('selected_track', 'IT')
     if selected_track == 'Non-IT':
-        active_assessment = Assessment.query.filter(Assessment.title.contains('Non-IT')).first()
+        active_assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.contains('Non-IT')).first()
     else:
-        active_assessment = Assessment.query.filter(Assessment.title.contains('IT'), ~Assessment.title.contains('Non-IT')).first()
+        active_assessment = Assessment.query.filter(Assessment.status == 'active', Assessment.title.contains('IT'), ~Assessment.title.contains('Non-IT')).first()
 
     if not active_assessment:
         flash('The selected assessment is currently not available.', 'warning')
@@ -137,51 +148,58 @@ def save_answer():
         return api_error('Assessment session expired.', 403)
 
     data = request.get_json(silent=True) or {}
-    question_id = data.get('question_id')
-    selected_option = data.get('selected_option')  # A/B/C/D or null
+    
+    # Support both bulk payload { answers: { "10": "A", "11": "B" } } and single payload { question_id: 10, selected_option: "A" }
+    answers_to_save = {}
+    if 'answers' in data and isinstance(data['answers'], dict):
+        answers_to_save = data['answers']
+    elif 'question_id' in data:
+        answers_to_save[str(data['question_id'])] = data.get('selected_option')
 
-    if not question_id:
-        return api_error('Missing question_id.', 400)
+    if not answers_to_save:
+        return api_error('Missing answer data.', 400)
 
-    # Validate question belongs to this assessment
-    q = Question.query.get(question_id)
-    if not q or q.assessment_id != submission.assessment_id:
-        return api_error('Invalid question.', 400)
-
-    # Validate selected_option
-    if selected_option not in ('A', 'B', 'C', 'D', None):
-        return api_error('Invalid option.', 400)
-
-    # Upsert — safe to call multiple times
     try:
-        stmt = pg_insert(Answer).values(
-            submission_id=submission_id,
-            question_id=question_id,
-            selected_option=selected_option,
-        ).on_conflict_do_update(
-            constraint='uq_submission_question',
-            set_={'selected_option': selected_option}
-        )
-        db.session.execute(stmt)
-        db.session.commit()
-    except Exception:
-        # Fallback for SQLite (dev) which doesn't support pg_insert
-        db.session.rollback()
-        existing = Answer.query.filter_by(
-            submission_id=submission_id,
-            question_id=question_id
-        ).first()
-        if existing:
-            existing.selected_option = selected_option
-        else:
-            db.session.add(Answer(
-                submission_id=submission_id,
-                question_id=question_id,
-                selected_option=selected_option
-            ))
-        db.session.commit()
+        for q_id_str, selected_option in answers_to_save.items():
+            try:
+                question_id = int(q_id_str)
+            except (ValueError, TypeError):
+                continue
 
-    return api_success(message='Answer saved.')
+            if selected_option not in ('A', 'B', 'C', 'D', None):
+                continue
+
+            try:
+                stmt = pg_insert(Answer).values(
+                    submission_id=submission_id,
+                    question_id=question_id,
+                    selected_option=selected_option,
+                ).on_conflict_do_update(
+                    constraint='uq_submission_question',
+                    set_={'selected_option': selected_option}
+                )
+                db.session.execute(stmt)
+            except Exception:
+                db.session.rollback()
+                existing = Answer.query.filter_by(
+                    submission_id=submission_id,
+                    question_id=question_id
+                ).first()
+                if existing:
+                    existing.selected_option = selected_option
+                else:
+                    db.session.add(Answer(
+                        submission_id=submission_id,
+                        question_id=question_id,
+                        selected_option=selected_option
+                    ))
+
+        db.session.commit()
+    except Exception as err:
+        db.session.rollback()
+        return api_error('Failed to save answers.', 500)
+
+    return api_success(message='Answers saved.')
 
 
 # ─────────────────────────────────────────────
@@ -215,7 +233,17 @@ def record_violation():
 @assessment_session_required
 def submit():
     submission_id = session['submission_id']
-    submission = Submission.query.get(submission_id)
+    
+    # 1 single SQL query with joinedload for submission + assessment + answers
+    submission = (
+        db.session.query(Submission)
+        .options(
+            joinedload(Submission.assessment),
+            joinedload(Submission.answers)
+        )
+        .filter(Submission.id == submission_id)
+        .first()
+    )
 
     if not submission:
         flash('Submission not found.', 'danger')
@@ -225,20 +253,17 @@ def submit():
         # Already submitted
         return redirect(url_for('assessment.result', submission_id=submission.id))
 
-    # Fetch all answers for this submission
-    answers = Answer.query.filter_by(submission_id=submission_id).all()
-    questions = Question.query.filter_by(
-        assessment_id=submission.assessment_id
-    ).all()
+    # Fetch cached questions for this assessment
+    questions = _get_cached_questions(submission.assessment_id)
 
-    answer_map = {a.question_id: a.selected_option for a in answers}
+    answer_map = {a.question_id: a.selected_option for a in submission.answers}
     correct = sum(
         1 for q in questions
         if answer_map.get(q.id) == q.correct_answer
     )
     total = len(questions)
     percentage = (correct / total * 100) if total > 0 else 0
-    pass_pct = submission.assessment.pass_percentage
+    pass_pct = submission.assessment.pass_percentage if submission.assessment else 60.0
     status = 'pass' if percentage >= pass_pct else 'fail'
 
     submission.score = correct
@@ -248,7 +273,7 @@ def submit():
     submission.submitted_at = datetime.utcnow()
     db.session.commit()
 
-    # Clear assessment from session (keep candidate session)
+    # Clear assessment session keys
     session.pop('submission_id', None)
     session.pop('assessment_id', None)
 
@@ -261,22 +286,27 @@ def submit():
 
 @assessment_bp.route('/result/<int:submission_id>')
 def result(submission_id):
-    submission = Submission.query.get_or_404(submission_id)
+    submission = (
+        db.session.query(Submission)
+        .options(
+            joinedload(Submission.candidate),
+            joinedload(Submission.assessment),
+            joinedload(Submission.answers)
+        )
+        .filter(Submission.id == submission_id)
+        .first_or_404()
+    )
 
     # Security: only the owning candidate (or admin) can view
     candidate_id_in_session = session.get('candidate_id')
     if candidate_id_in_session != submission.candidate_id:
-        # Allow if admin is logged in
         from flask_login import current_user
         if not current_user.is_authenticated:
             flash('Unauthorized access.', 'danger')
             return redirect(url_for('candidate.register'))
 
-    questions = Question.query.filter_by(
-        assessment_id=submission.assessment_id
-    ).all()
-    answers = {a.question_id: a.selected_option for a in
-               Answer.query.filter_by(submission_id=submission_id).all()}
+    questions = _get_cached_questions(submission.assessment_id)
+    answers = {a.question_id: a.selected_option for a in submission.answers}
 
     wrong = sum(
         1 for q in questions

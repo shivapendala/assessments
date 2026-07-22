@@ -178,9 +178,7 @@ def delete_assessment(assessment_id):
 def toggle_assessment_status(assessment_id):
     assessment = Assessment.query.get_or_404(assessment_id)
 
-    # Only one assessment can be active at a time
     if assessment.status == 'inactive':
-        Assessment.query.filter_by(status='active').update({'status': 'inactive'})
         assessment.status = 'active'
         msg = f'Assessment "{assessment.title}" is now ACTIVE.'
     else:
@@ -283,24 +281,28 @@ def delete_question(question_id):
 def results():
     page = request.args.get('page', 1, type=int)
     search = request.args.get('search', '').strip()
+    status = request.args.get('status', 'all').strip().lower()
     per_page = 20
 
+    from sqlalchemy.orm import joinedload
     query = (
         db.session.query(Submission)
-        .join(Submission.candidate)
-        .join(Submission.assessment)
         .options(
             joinedload(Submission.candidate),
-            joinedload(Submission.assessment),
+            joinedload(Submission.assessment)
         )
         .filter(Submission.status != 'in_progress')
-        .order_by(Submission.submitted_at.desc())
     )
+
+    if status in ('pass', 'fail'):
+        query = query.filter(Submission.status == status)
+
+    query = query.order_by(Submission.submitted_at.desc())
 
     if search:
         from models.models import Candidate as Cand
         like = f'%{search}%'
-        query = query.filter(
+        query = query.join(Submission.candidate).filter(
             db.or_(
                 Cand.full_name.ilike(like),
                 Cand.hall_ticket.ilike(like),
@@ -319,6 +321,7 @@ def results():
         total_pages=total_pages,
         total=total,
         search=search,
+        status=status,
         per_page=per_page,
     )
 
@@ -328,11 +331,12 @@ def results():
 def export_results():
     fmt = request.args.get('fmt', 'csv').lower()
     search = request.args.get('search', '').strip()
+    status = request.args.get('status', None)
     assessment_id = request.args.get('assessment_id', None, type=int)
 
     if fmt == 'xlsx':
-        return export_xlsx(search=search, assessment_id=assessment_id)
-    return export_csv(search=search, assessment_id=assessment_id)
+        return export_xlsx(search=search, assessment_id=assessment_id, status=status)
+    return export_csv(search=search, assessment_id=assessment_id, status=status)
 
 
 # ─────────────────────────────────────────────

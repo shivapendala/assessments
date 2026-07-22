@@ -175,7 +175,7 @@ class Submission(db.Model):
     percentage = db.Column(db.Float, default=0.0)
     violations = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='in_progress', index=True)  # in_progress | pass | fail
-    submitted_at = db.Column(db.DateTime, nullable=True)
+    submitted_at = db.Column(db.DateTime, nullable=True, index=True)
 
     # Relationships — lazy='select' allows joinedload() in route queries
     answers = db.relationship(
@@ -183,9 +183,10 @@ class Submission(db.Model):
         cascade='all, delete-orphan'
     )
 
-    # Prevent duplicate submissions per candidate per assessment
+    # Prevent duplicate submissions per candidate per assessment & index query paths
     __table_args__ = (
         db.UniqueConstraint('candidate_id', 'assessment_id', name='uq_candidate_assessment'),
+        db.Index('ix_submissions_status_submitted', 'status', 'submitted_at'),
     )
 
     def to_dict(self):

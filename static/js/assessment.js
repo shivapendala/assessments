@@ -223,6 +223,8 @@ function renderQuestion(index) {
 
 
 // ── Option Selection ─────────────────────────────────────────
+let globalSaveTimer = null;
+
 function selectOption(questionId, letter, el) {
   // Toggle — click same again to deselect
   const current = answers[questionId];
@@ -233,30 +235,34 @@ function selectOption(questionId, letter, el) {
   document.querySelectorAll('.option-item').forEach(item => item.classList.remove('selected'));
   if (newOpt) el.classList.add('selected');
 
-  // Persist to localStorage immediately
+  // Persist to localStorage immediately (zero data loss)
   localStorage.setItem(LS_KEY_ANSWERS, JSON.stringify(answers));
 
-  // Debounced server save
-  if (saveDebounceTimers[questionId]) clearTimeout(saveDebounceTimers[questionId]);
-  saveDebounceTimers[questionId] = setTimeout(() => {
-    saveAnswer(questionId, newOpt);
-  }, 400);
+  // Debounced bulk server save (1000ms)
+  if (globalSaveTimer) clearTimeout(globalSaveTimer);
+  globalSaveTimer = setTimeout(() => {
+    flushAnswersToServer();
+  }, 1000);
 
   updateNavGrid();
   updateSummaryCount();
 }
 
 
-// ── Auto-Save to Server ──────────────────────────────────────
-async function saveAnswer(questionId, selectedOption) {
+// ── Auto-Save / Flush to Server ─────────────────────────────
+async function flushAnswersToServer() {
   try {
+    const currentAnswers = JSON.parse(localStorage.getItem(LS_KEY_ANSWERS) || '{}');
     await apiPost(SAVE_URL, {
-      question_id: questionId,
-      selected_option: selectedOption,
+      answers: currentAnswers
     });
   } catch (err) {
-    console.warn('Auto-save failed (will retry on next selection):', err);
+    console.warn('Auto-save sync delayed (will retry):', err);
   }
+}
+
+async function saveAnswer(questionId, selectedOption) {
+  flushAnswersToServer();
 }
 
 
@@ -326,13 +332,10 @@ async function doSubmit() {
   localStorage.removeItem(LS_KEY_TIMER);
   localStorage.removeItem(LS_KEY_ANSWERS);
 
-  // Save all pending answers first
-  const savePromises = QUESTIONS.map(q =>
-    saveAnswer(q.id, answers[q.id] || null)
-  );
-  await Promise.allSettled(savePromises);
+  // Fire unsaved answer flush asynchronously (non-blocking) & submit immediately
+  flushAnswersToServer().catch(() => {});
 
-  // Submit
+  // Instant Submit
   document.getElementById('submitForm').submit();
 }
 

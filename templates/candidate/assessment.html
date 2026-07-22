@@ -36,9 +36,9 @@
   gap: 28px;
   font-family: var(--font);
 ">
-  <!-- Animated logo -->
-  <div style="width:64px;height:64px;border-radius:16px;overflow:hidden;box-shadow:0 0 40px rgba(139,92,246,0.4);">
-    <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ" style="width:100%;height:100%;object-fit:contain;" />
+  <!-- Clean Logo -->
+  <div style="display: flex; align-items: center; justify-content: center; max-width: 280px; height: 60px;">
+    <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ" style="max-height: 100%; max-width: 100%; object-fit: contain; filter: drop-shadow(0 4px 16px rgba(139,92,246,0.3));" />
   </div>
 
   <!-- Spinner -->
@@ -84,7 +84,7 @@
   <!-- Top Bar -->
   <header class="exam-header">
     <div class="exam-brand">
-      <div class="logo-icon-sm-white"><img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" /></div>
+      <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" style="height: 32px; width: auto; object-fit: contain;" />
       <span class="exam-assessment-title">{{ assessment.title }}</span>
     </div>
 

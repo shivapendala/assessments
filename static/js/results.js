@@ -35,12 +35,11 @@
   const el = document.getElementById(id);
   if (!el) return;
   el.addEventListener('click', function() {
-    const orig = this.textContent.trim();
-    this.textContent = '⏳ Preparing…';
-    this.style.opacity = '0.7';
+    this.style.opacity = '0.5';
+    this.style.pointerEvents = 'none';
     setTimeout(() => {
-      this.textContent = orig;
       this.style.opacity = '';
+      this.style.pointerEvents = '';
     }, 3000);
   });
 });
