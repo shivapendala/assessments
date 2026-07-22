@@ -36,14 +36,18 @@ def login():
             flash('Email and password are required.', 'danger')
             return render_template('admin/login.html')
 
-        admin = Admin.query.filter_by(email=email).first()
-        if admin and admin.check_password(password):
-            login_user(admin, remember=False)
-            next_page = request.args.get('next')
-            flash(f'Welcome back, {admin.email}!', 'success')
-            return redirect(next_page or url_for('admin.dashboard'))
-        else:
-            flash('Invalid email or password.', 'danger')
+        try:
+            admin = Admin.query.filter_by(email=email).first()
+            if admin and admin.check_password(password):
+                login_user(admin, remember=False)
+                next_page = request.args.get('next')
+                flash(f'Welcome back, {admin.email}!', 'success')
+                return redirect(next_page or url_for('admin.dashboard'))
+            else:
+                flash('Invalid email or password.', 'danger')
+        except Exception as err:
+            db.session.rollback()
+            flash(f'Login error: {str(err)}', 'danger')
 
     return render_template('admin/login.html')
 

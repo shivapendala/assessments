@@ -100,9 +100,9 @@ def register():
             flash(f'Registration successful! Welcome, {full_name}!', 'success')
             return redirect(url_for('candidate.dashboard'))
 
-        except IntegrityError:
+        except Exception as err:
             db.session.rollback()
-            flash('Registration failed. Email or Hall Ticket already exists.', 'danger')
+            flash(f'Registration failed: {str(err)}', 'danger')
 
     return render_template('candidate/register.html')
 
@@ -110,7 +110,7 @@ def register():
 @candidate_bp.route('/dashboard')
 @candidate_required
 def dashboard():
-    candidate = Candidate.query.get(session['candidate_id'])
+    candidate = db.session.get(Candidate, session['candidate_id'])
     if not candidate:
         session.clear()
         return redirect(url_for('candidate.register'))
