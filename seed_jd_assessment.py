@@ -10,6 +10,7 @@ from models.models import db, Assessment, Question, Submission, Answer
 def seed_assessment():
     app = create_app()
     with app.app_context():
+        db.create_all()
         # Delete existing IT assessment, submissions, answers and questions to start fresh
         all_a = Assessment.query.all()
         it_assessments = [a for a in all_a if 'IT' in a.title and 'Non-IT' not in a.title]
