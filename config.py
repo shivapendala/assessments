@@ -18,10 +18,7 @@ engine_options = {
     'pool_pre_ping': True,
 }
 if db_url and ('postgres' in db_url or 'pg8000' in db_url):
-    context = ssl.create_default_context()
-    context.check_hostname = False
-    context.verify_mode = ssl.CERT_NONE
-    engine_options['connect_args'] = {'ssl_context': context}
+    engine_options['connect_args'] = {'ssl': True}
 
 
 class Config:
