@@ -32,9 +32,9 @@ def start():
 
     selected_track = session.get('selected_track', 'IT')
     if selected_track == 'Non-IT':
-        active_assessment = Assessment.query.filter(Assessment.title.like('%Non-IT%')).first()
+        active_assessment = Assessment.query.filter(Assessment.title.contains('Non-IT')).first()
     else:
-        active_assessment = Assessment.query.filter(Assessment.title.like('%IT%'), ~Assessment.title.like('%Non-IT%')).first()
+        active_assessment = Assessment.query.filter(Assessment.title.contains('IT'), ~Assessment.title.contains('Non-IT')).first()
 
     if not active_assessment:
         flash('The selected assessment is currently not available.', 'warning')

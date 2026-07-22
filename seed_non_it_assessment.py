@@ -12,7 +12,7 @@ def seed_assessment():
     with app.app_context():
         # Delete existing Non-IT assessment, submissions, answers and questions to start fresh
         from models.models import Submission, Answer
-        non_it_assessments = Assessment.query.filter(Assessment.title.like('%Non-IT%')).all()
+        non_it_assessments = Assessment.query.filter(Assessment.title.contains('Non-IT')).all()
         for old_a in non_it_assessments:
             subs = Submission.query.filter_by(assessment_id=old_a.id).all()
             for sub in subs:
