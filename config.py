@@ -64,19 +64,19 @@ def fix_database_uri(uri: str) -> str:
 
 class DevelopmentConfig(Config):
     DEBUG = True
-    _custom_url = os.environ.get('ASSESSMENT_DATABASE_URL')
-    SQLALCHEMY_DATABASE_URI = fix_database_uri(_custom_url) if _custom_url else 'sqlite:///elevateiq_assessments.db'
+    _db_raw = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(_db_raw) if _db_raw else 'sqlite:///elevateiq_assessments.db'
     SESSION_COOKIE_SECURE = False
     WTF_CSRF_ENABLED = True
-    SQLALCHEMY_ENGINE_OPTIONS = engine_options if _custom_url and ('postgres' in _custom_url or 'pg8000' in _custom_url) else {}
+    SQLALCHEMY_ENGINE_OPTIONS = engine_options if _db_raw and ('postgres' in _db_raw or 'pg8000' in _db_raw) else {}
 
 
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
-    _custom_url = os.environ.get('ASSESSMENT_DATABASE_URL')
-    SQLALCHEMY_DATABASE_URI = fix_database_uri(_custom_url) if _custom_url else 'sqlite:///elevateiq_assessments.db'
-    SQLALCHEMY_ENGINE_OPTIONS = engine_options if _custom_url and ('postgres' in _custom_url or 'pg8000' in _custom_url) else {}
+    _db_raw = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL')
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(_db_raw) if _db_raw else 'sqlite:///elevateiq_assessments.db'
+    SQLALCHEMY_ENGINE_OPTIONS = engine_options if _db_raw and ('postgres' in _db_raw or 'pg8000' in _db_raw) else {}
 
 
 class TestingConfig(Config):

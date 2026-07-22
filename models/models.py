@@ -15,7 +15,7 @@ db = SQLAlchemy()
 # Admin Model
 # ─────────────────────────────────────────────
 class Admin(db.Model, UserMixin):
-    __tablename__ = 'admins'
+    __tablename__ = 'assessment_admins'
 
     id = db.Column(db.Integer, primary_key=True)
     email = db.Column(db.String(255), unique=True, nullable=False, index=True)
@@ -36,7 +36,7 @@ class Admin(db.Model, UserMixin):
 # Candidate Model
 # ─────────────────────────────────────────────
 class Candidate(db.Model):
-    __tablename__ = 'candidates'
+    __tablename__ = 'assessment_candidates'
 
     id = db.Column(db.Integer, primary_key=True)
     full_name = db.Column(db.String(255), nullable=False)
@@ -67,7 +67,7 @@ class Candidate(db.Model):
 # Assessment Model
 # ─────────────────────────────────────────────
 class Assessment(db.Model):
-    __tablename__ = 'assessments'
+    __tablename__ = 'assessment_drives'
 
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(255), nullable=False)
@@ -117,11 +117,11 @@ class Assessment(db.Model):
 # Question Model
 # ─────────────────────────────────────────────
 class Question(db.Model):
-    __tablename__ = 'questions'
+    __tablename__ = 'assessment_questions'
 
     id = db.Column(db.Integer, primary_key=True)
     assessment_id = db.Column(
-        db.Integer, db.ForeignKey('assessments.id', ondelete='CASCADE'),
+        db.Integer, db.ForeignKey('assessment_drives.id', ondelete='CASCADE'),
         nullable=False, index=True
     )
     question = db.Column(db.Text, nullable=False)
@@ -159,15 +159,15 @@ class Question(db.Model):
 # Submission Model
 # ─────────────────────────────────────────────
 class Submission(db.Model):
-    __tablename__ = 'submissions'
+    __tablename__ = 'assessment_submissions'
 
     id = db.Column(db.Integer, primary_key=True)
     candidate_id = db.Column(
-        db.Integer, db.ForeignKey('candidates.id', ondelete='CASCADE'),
+        db.Integer, db.ForeignKey('assessment_candidates.id', ondelete='CASCADE'),
         nullable=False, index=True
     )
     assessment_id = db.Column(
-        db.Integer, db.ForeignKey('assessments.id', ondelete='CASCADE'),
+        db.Integer, db.ForeignKey('assessment_drives.id', ondelete='CASCADE'),
         nullable=False, index=True
     )
     score = db.Column(db.Integer, default=0)
@@ -219,15 +219,15 @@ class Submission(db.Model):
 # Answer Model
 # ─────────────────────────────────────────────
 class Answer(db.Model):
-    __tablename__ = 'answers'
+    __tablename__ = 'assessment_answers'
 
     id = db.Column(db.Integer, primary_key=True)
     submission_id = db.Column(
-        db.Integer, db.ForeignKey('submissions.id', ondelete='CASCADE'),
+        db.Integer, db.ForeignKey('assessment_submissions.id', ondelete='CASCADE'),
         nullable=False, index=True
     )
     question_id = db.Column(
-        db.Integer, db.ForeignKey('questions.id', ondelete='CASCADE'),
+        db.Integer, db.ForeignKey('assessment_questions.id', ondelete='CASCADE'),
         nullable=False, index=True
     )
     selected_option = db.Column(db.String(1), nullable=True)  # A | B | C | D | None
