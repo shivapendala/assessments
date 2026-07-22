@@ -11,8 +11,8 @@ load_dotenv()
 # Build SQLALCHEMY_ENGINE_OPTIONS dynamically to support SSL context for pg8000
 db_url = os.environ.get('DATABASE_URL', '')
 engine_options = {
-    'pool_size': 30,
-    'max_overflow': 50,
+    'pool_size': 3,
+    'max_overflow': 2,
     'pool_timeout': 30,
     'pool_recycle': 1800,
     'pool_pre_ping': True,
