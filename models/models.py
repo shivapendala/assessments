@@ -144,10 +144,12 @@ class Question(db.Model):
     )
 
     def to_dict(self, include_answer=False):
+        import re
+        clean_q = re.sub(r'^Q\d+[\.\:\s]+\s*', '', self.question or '', flags=re.IGNORECASE)
         data = {
             'id': self.id,
             'assessment_id': self.assessment_id,
-            'question': self.question,
+            'question': clean_q,
             'option_a': self.option_a,
             'option_b': self.option_b,
             'option_c': self.option_c,

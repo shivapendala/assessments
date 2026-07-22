@@ -188,6 +188,9 @@ function renderQuestion(index) {
   const progressPct = ((index + 1) / totalQ * 100).toFixed(1);
   document.getElementById('progressFill').style.width = progressPct + '%';
 
+  // Strip hardcoded "Q1.", "Q20.", "Q1:", etc. from question text so shuffled numbers match current index
+  const cleanQuestionText = String(q.question || '').replace(/^Q\d+[\.\:\s]+\s*/i, '');
+
   // Build HTML (supporting jumbled options)
   const optionLetters = ['A', 'B', 'C', 'D'];
   const rawOpts = q.options || [
@@ -212,7 +215,7 @@ function renderQuestion(index) {
 
   document.getElementById('questionContent').innerHTML = `
     <span class="question-num">Question ${index + 1} of ${totalQ}</span>
-    <div class="question-text">${escapeHtml(q.question)}</div>
+    <div class="question-text">${escapeHtml(cleanQuestionText)}</div>
     <div class="options-list">${optionsHTML}</div>
   `;
 
