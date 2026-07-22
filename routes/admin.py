@@ -64,35 +64,41 @@ def logout():
 @admin_bp.route('/dashboard')
 @login_required
 def dashboard():
-    stats = get_dashboard_stats()
-    
-    # Retrieve passed and failed members separately using joinedload to avoid N+1
-    passed_results = (
-        db.session.query(Submission)
-        .options(joinedload(Submission.candidate))
-        .filter_by(status='pass')
-        .order_by(Submission.submitted_at.desc())
-        .limit(10)
-        .all()
-    )
-    failed_results = (
-        db.session.query(Submission)
-        .options(joinedload(Submission.candidate))
-        .filter_by(status='fail')
-        .order_by(Submission.submitted_at.desc())
-        .limit(10)
-        .all()
-    )
-    
-    # Only load the 10 most recent assessments for the dashboard sidebar
-    assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(10).all()
-    return render_template(
-        'admin/dashboard.html',
-        stats=stats,
-        passed_results=passed_results,
-        failed_results=failed_results,
-        assessments=assessments
-    )
+    try:
+        stats = get_dashboard_stats()
+        passed_results = (
+            db.session.query(Submission)
+            .options(joinedload(Submission.candidate))
+            .filter_by(status='pass')
+            .order_by(Submission.submitted_at.desc())
+            .limit(10)
+            .all()
+        )
+        failed_results = (
+            db.session.query(Submission)
+            .options(joinedload(Submission.candidate))
+            .filter_by(status='fail')
+            .order_by(Submission.submitted_at.desc())
+            .limit(10)
+            .all()
+        )
+        assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(10).all()
+        return render_template(
+            'admin/dashboard.html',
+            stats=stats,
+            passed_results=passed_results,
+            failed_results=failed_results,
+            assessments=assessments
+        )
+    except Exception as e:
+        db.session.rollback()
+        return render_template(
+            'admin/dashboard.html',
+            stats={'total_candidates': 0, 'total_assessments': 0, 'active_assessments': 0, 'total_attempts': 0, 'passed': 0, 'failed': 0, 'in_progress': 0, 'pass_rate': 0},
+            passed_results=[],
+            failed_results=[],
+            assessments=[]
+        )
 
 
 # ─────────────────────────────────────────────

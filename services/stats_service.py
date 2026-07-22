@@ -24,41 +24,47 @@ def get_dashboard_stats() -> dict:
 
 @cache.cached(timeout=60, key_prefix='dashboard_stats')
 def _compute_dashboard_stats() -> dict:
-    # ── Query 1: candidates + assessments in one shot ─────────
-    candidate_count = db.session.query(func.count(Candidate.id)).scalar() or 0
-    assessment_stats = db.session.query(
-        func.count(Assessment.id).label('total'),
-        func.sum(case((Assessment.status == 'active', 1), else_=0)).label('active'),
-    ).one()
-    total_assessments = assessment_stats.total or 0
-    active_assessments = int(assessment_stats.active or 0)
+    try:
+        candidate_count = db.session.query(func.count(Candidate.id)).scalar() or 0
+        total_assessments = db.session.query(func.count(Assessment.id)).scalar() or 0
+        active_assessments = db.session.query(func.count(Assessment.id)).filter(Assessment.status == 'active').scalar() or 0
 
-    # ── Query 2: all submission status counts in a single GROUP BY ──
-    status_rows = (
-        db.session.query(
-            Submission.status,
-            func.count(Submission.id).label('cnt')
+        status_rows = (
+            db.session.query(
+                Submission.status,
+                func.count(Submission.id).label('cnt')
+            )
+            .group_by(Submission.status)
+            .all()
         )
-        .group_by(Submission.status)
-        .all()
-    )
 
-    status_counts = {row.status: row.cnt for row in status_rows}
-    passed      = status_counts.get('pass', 0)
-    failed      = status_counts.get('fail', 0)
-    in_progress = status_counts.get('in_progress', 0)
-    total_attempts = passed + failed + in_progress
+        status_counts = {row.status: row.cnt for row in status_rows}
+        passed      = status_counts.get('pass', 0)
+        failed      = status_counts.get('fail', 0)
+        in_progress = status_counts.get('in_progress', 0)
+        total_attempts = passed + failed + in_progress
 
-    return {
-        'total_candidates':  candidate_count,
-        'total_assessments': total_assessments,
-        'active_assessments': active_assessments,
-        'total_attempts':    total_attempts,
-        'passed':            passed,
-        'failed':            failed,
-        'in_progress':       in_progress,
-        'pass_rate': round((passed / (passed + failed) * 100) if (passed + failed) > 0 else 0, 1),
-    }
+        return {
+            'total_candidates':  candidate_count,
+            'total_assessments': total_assessments,
+            'active_assessments': active_assessments,
+            'total_attempts':    total_attempts,
+            'passed':            passed,
+            'failed':            failed,
+            'in_progress':       in_progress,
+            'pass_rate': round((passed / (passed + failed) * 100) if (passed + failed) > 0 else 0, 1),
+        }
+    except Exception:
+        return {
+            'total_candidates': 0,
+            'total_assessments': 0,
+            'active_assessments': 0,
+            'total_attempts': 0,
+            'passed': 0,
+            'failed': 0,
+            'in_progress': 0,
+            'pass_rate': 0,
+        }
 
 
 def get_recent_results(limit: int = 10):
