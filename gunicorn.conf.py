@@ -6,11 +6,10 @@ import os
 bind = os.environ.get('BIND', '0.0.0.0:8000')
 
 # ── Workers ──────────────────────────────────────────────────
-# 8 workers × 8 threads = 64 concurrent requests for 300+ users
+# 8 gevent async workers × 2000 connections = 16,000 max concurrent connections
 workers = int(os.environ.get('WORKERS', 8))
-worker_class = 'gthread'       # gthread workers handle concurrent I/O via threads
-worker_connections = 1000
-threads = 8
+worker_class = 'gevent'
+worker_connections = int(os.environ.get('WORKER_CONNECTIONS', 2000))
 
 # ── Max Requests (prevents memory leaks in long-running workers) ─────────────
 # Workers are recycled after this many requests (+ random jitter to avoid
@@ -30,7 +29,7 @@ errorlog  = '-'        # stderr
 access_log_format = '%(h)s %(l)s %(u)s %(t)s "%(r)s" %(s)s %(b)s "%(f)s" "%(a)s" %(D)s'
 
 # ── Process ──────────────────────────────────────────────────
-preload_app  = True    # load app before forking (saves memory, enables CoW)
+preload_app  = False   # Set to False for gevent async DB pool isolation across workers
 daemon       = False   # systemd manages the process
 proc_name    = 'elevateiq'
 pidfile      = '/tmp/elevateiq.pid'
