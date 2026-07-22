@@ -13,4 +13,4 @@ alembic==1.13.3
 Flask-Migrate==4.0.7
 Flask-Caching==2.4.1
 psycopg2-binary==2.9.9
-gevent==24.2.1
+gevent==24.10.3
