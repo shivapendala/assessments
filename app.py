@@ -65,7 +65,7 @@ def create_app(config_class=None):
     # ── User loader for Flask-Login ─────────────────────────────────────────
     @login_manager.user_loader
     def load_user(user_id):
-        return Admin.query.get(int(user_id))
+        return db.session.get(Admin, int(user_id))
 
     # ── Error handlers ─────────────────────────────────────────────────────
     @app.errorhandler(404)
@@ -84,6 +84,24 @@ def create_app(config_class=None):
     @app.route('/health')
     def health():
         return {'status': 'ok', 'service': 'ElevateIQ'}, 200
+
+    # ── DB Connection Warmup (eliminates cold start on first requests) ─────
+    _warmed_up = {'done': False}
+
+    @app.before_request
+    def warmup_db():
+        if _warmed_up['done']:
+            return
+        _warmed_up['done'] = True
+        try:
+            # Pre-establish DB connections and prime caches
+            db.session.execute(db.text('SELECT 1'))
+            db.session.commit()
+            # Prime the active assessments cache
+            from routes.candidate import _get_active_assessments
+            _get_active_assessments()
+        except Exception:
+            pass
 
     # ── Context processors ─────────────────────────────────────────────────
     @app.context_processor

@@ -12,8 +12,15 @@ engine_options = {
     'pool_size': 10,
     'max_overflow': 20,
     'pool_timeout': 30,
-    'pool_recycle': 1800,
+    'pool_recycle': 300,       # Recycle every 5 min (Neon serverless drops idle connections)
     'pool_pre_ping': True,
+    'connect_args': {
+        'keepalives': 1,            # Enable TCP keepalive
+        'keepalives_idle': 30,      # Send first probe after 30s idle
+        'keepalives_interval': 10,  # Probe interval
+        'keepalives_count': 5,      # Max failed probes before drop
+        'connect_timeout': 10,      # Connection timeout in seconds
+    },
 }
 
 

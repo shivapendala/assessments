@@ -6,11 +6,11 @@ import os
 bind = os.environ.get('BIND', '0.0.0.0:8000')
 
 # ── Workers ──────────────────────────────────────────────────
-# Rule of thumb: (2 × CPU cores) + 1
-workers = int(os.environ.get('WORKERS', multiprocessing.cpu_count() * 2 + 1))
+# 8 workers × 8 threads = 64 concurrent requests for 300+ users
+workers = int(os.environ.get('WORKERS', 8))
 worker_class = 'gthread'       # gthread workers handle concurrent I/O via threads
 worker_connections = 1000
-threads = 4
+threads = 8
 
 # ── Max Requests (prevents memory leaks in long-running workers) ─────────────
 # Workers are recycled after this many requests (+ random jitter to avoid

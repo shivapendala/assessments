@@ -16,6 +16,17 @@ from utils.helpers import (
 candidate_bp = Blueprint('candidate', __name__)
 
 
+def _get_active_assessments():
+    """Return active assessments, cached for 60 seconds."""
+    from extensions import cache
+    cache_key = 'active_assessments'
+    result = cache.get(cache_key)
+    if result is None:
+        result = Assessment.query.filter_by(status='active').all()
+        cache.set(cache_key, result, timeout=60)
+    return result
+
+
 @candidate_bp.route('/')
 def index():
     if 'candidate_id' in session:
@@ -74,9 +85,9 @@ def register():
             return render_template('candidate/register.html',
                                    full_name=full_name, email=email, hall_ticket=hall_ticket)
 
-        # Check if there's an active assessment
-        active_assessment = Assessment.query.filter_by(status='active').first()
-        if not active_assessment:
+        # Check if there's an active assessment (cached — no DB hit)
+        active_assessments = _get_active_assessments()
+        if not active_assessments:
             flash('No active assessment is currently available. Please check back later.', 'warning')
             return render_template('candidate/register.html',
                                    full_name=full_name, email=email, hall_ticket=hall_ticket)
@@ -133,8 +144,8 @@ def dashboard():
             show_selection=True
         )
 
-    # Fetch corresponding active assessment based on selected track safely
-    all_assessments = Assessment.query.filter_by(status='active').all()
+    # Fetch corresponding active assessment based on selected track (cached — no DB hit)
+    all_assessments = _get_active_assessments()
     if selected_track == 'Non-IT':
         assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
     else:

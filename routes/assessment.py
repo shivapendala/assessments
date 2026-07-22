@@ -43,7 +43,8 @@ def start():
         return redirect(url_for('candidate.register'))
 
     selected_track = session.get('selected_track', 'IT')
-    all_assessments = Assessment.query.filter_by(status='active').all()
+    from routes.candidate import _get_active_assessments
+    all_assessments = _get_active_assessments()
     if selected_track == 'Non-IT':
         active_assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
     else:
