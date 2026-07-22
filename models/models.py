@@ -185,7 +185,7 @@ class Submission(db.Model):
 
     # Prevent duplicate submissions per candidate per assessment & index query paths
     __table_args__ = (
-        db.UniqueConstraint('candidate_id', 'assessment_id', name='uq_candidate_assessment'),
+        db.UniqueConstraint('candidate_id', 'assessment_id', name='uq_assessment_candidate_drive'),
         db.Index('ix_submissions_status_submitted', 'status', 'submitted_at'),
     )
 
@@ -234,7 +234,7 @@ class Answer(db.Model):
 
     # Each question can only have one answer per submission
     __table_args__ = (
-        db.UniqueConstraint('submission_id', 'question_id', name='uq_submission_question'),
+        db.UniqueConstraint('submission_id', 'question_id', name='uq_assessment_submission_question'),
         # Composite index for fast answer lookups during auto-save + submission scoring
         db.Index('ix_answers_submission_question', 'submission_id', 'question_id'),
     )

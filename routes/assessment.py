@@ -37,7 +37,7 @@ def _get_cached_questions(assessment_id: int):
 @candidate_required
 def start():
     candidate_id = session['candidate_id']
-    candidate = Candidate.query.get(candidate_id)
+    candidate = db.session.get(Candidate, candidate_id)
     if not candidate:
         session.clear()
         return redirect(url_for('candidate.register'))
@@ -104,13 +104,13 @@ def engine():
     submission_id = session['submission_id']
     assessment_id = session['assessment_id']
 
-    submission = Submission.query.get(submission_id)
+    submission = db.session.get(Submission, submission_id)
     if not submission or submission.status != 'in_progress':
         flash('Your assessment session is not active.', 'warning')
         return redirect(url_for('candidate.dashboard'))
 
-    assessment = Assessment.query.get(assessment_id)
-    candidate = Candidate.query.get(session['candidate_id'])
+    assessment = db.session.get(Assessment, assessment_id)
+    candidate = db.session.get(Candidate, session['candidate_id'])
 
     questions = Question.query.filter_by(assessment_id=assessment_id).order_by(Question.id).all()
     
@@ -159,7 +159,7 @@ def engine():
 @assessment_session_required
 def save_answer():
     submission_id = session['submission_id']
-    submission = Submission.query.get(submission_id)
+    submission = db.session.get(Submission, submission_id)
 
     if not submission or submission.status != 'in_progress':
         return api_error('Assessment session expired.', 403)
@@ -192,7 +192,7 @@ def save_answer():
                     question_id=question_id,
                     selected_option=selected_option,
                 ).on_conflict_do_update(
-                    constraint='uq_submission_question',
+                    constraint='uq_assessment_submission_question',
                     set_={'selected_option': selected_option}
                 )
                 db.session.execute(stmt)
@@ -227,7 +227,7 @@ def save_answer():
 @assessment_session_required
 def record_violation():
     submission_id = session['submission_id']
-    submission = Submission.query.get(submission_id)
+    submission = db.session.get(Submission, submission_id)
 
     if not submission or submission.status != 'in_progress':
         return api_error('No active session.', 403)
