@@ -40,163 +40,163 @@ def seed_assessment():
 
         questions = [
             {
-                "question": "Q1. A shopkeeper marks an item 40% above the cost price and gives a 10% discount. What is his profit percentage?",
-                "option_a": "20%",
-                "option_b": "24%",
-                "option_c": "26%",
-                "option_d": "30%",
+                "question": "Q1. A bag contains 4 red and 6 black balls. Three balls are drawn at random one by one without replacement. What is the probability that at least two of them are red?",
+                "option_a": "11/30",
+                "option_b": "1/2",
+                "option_c": "1/3",
+                "option_d": "2/3",
                 "correct_answer": "C"
             },
             {
-                "question": "Q2. A can complete a work in 12 days, B in 18 days, and C in 36 days. If all three work together, how many days will they take?",
-                "option_a": "4",
-                "option_b": "5",
-                "option_c": "5.5",
-                "option_d": "6",
-                "correct_answer": "D"
+                "question": "Q2. Three pipelines A, B, and C can fill a reservoir in 6 hours. After working together for 2 hours, pipeline C is closed, and A and B fill the remaining part in 7 hours. How many hours would pipeline C alone take to fill the reservoir?",
+                "option_a": "10 hours",
+                "option_b": "12 hours",
+                "option_c": "14 hours",
+                "option_d": "16 hours",
+                "correct_answer": "C"
             },
             {
-                "question": "Q3. Two dice are thrown together. What is the probability that the sum is at least 10?",
-                "option_a": "1/6",
-                "option_b": "1/4",
-                "option_c": "5/36",
-                "option_d": "7/36",
+                "question": "Q3. What is the remainder when 2^2024 is divided by 17?",
+                "option_a": "1",
+                "option_b": "2",
+                "option_c": "4",
+                "option_d": "16",
                 "correct_answer": "A"
             },
             {
-                "question": "Q4. ₹10,000 is invested at 10% per annum compounded annually for 2 years. The compound interest is:",
-                "option_a": "₹2,000",
-                "option_b": "₹2,100",
-                "option_c": "₹2,200",
-                "option_d": "₹2,250",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Q5. A train 240 meters long crosses a pole in 12 seconds. What is its speed?",
-                "option_a": "60 km/h",
-                "option_b": "72 km/h",
-                "option_c": "80 km/h",
-                "option_d": "90 km/h",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Q6. 3, 8, 15, 24, 35, 48, ?",
-                "option_a": "61",
-                "option_b": "63",
-                "option_c": "64",
-                "option_d": "72",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Q7. ACE, BDF, CEG, ?",
-                "option_a": "DFH",
-                "option_b": "DEG",
-                "option_c": "DFI",
-                "option_d": "EGI",
+                "question": "Q4. In a knockout tournament with 64 teams, how many total matches are played to determine the single winner?",
+                "option_a": "63",
+                "option_b": "64",
+                "option_c": "32",
+                "option_d": "127",
                 "correct_answer": "A"
             },
             {
-                "question": "Q8. Statement:\n\nAll engineers are graduates.\n\nSome graduates are programmers.\n\nConclusions:\n\nI. Some engineers are programmers.\n\nII. All engineers are graduates.",
-                "option_a": "Only I follows",
-                "option_b": "Only II follows",
-                "option_c": "Both follow",
-                "option_d": "Neither follows",
+                "question": "Q5. There are 100 prisoners and 100 boxes, each containing a unique number from 1 to 100. Each prisoner enters the room one by one and can open up to 50 boxes to find their own number. They cannot communicate after entering. What strategy maximizes their team survival probability (where ALL must find their own number) to ~31.18%?",
+                "option_a": "Open 50 random boxes",
+                "option_b": "Use the loop strategy (open box of their number, then follow the pointer inside)",
+                "option_c": "Open even-numbered boxes only",
+                "option_d": "No strategy can raise the probability above 0%",
                 "correct_answer": "B"
             },
             {
-                "question": "Q9. Five friends A, B, C, D, and E sit in a row.\n\nA sits to the immediate left of B.\nC sits at one end.\nD sits between B and E.\n\nWho sits in the middle?",
-                "option_a": "A",
-                "option_b": "B",
+                "question": "Q6. In the cryptarithmetic equation SEND + MORE = MONEY, what digit does the letter 'O' represent?",
+                "option_a": "0",
+                "option_b": "1",
+                "option_c": "8",
+                "option_d": "9",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q7. What is the next number in the sequence: 2, 9, 28, 65, 126, ?",
+                "option_a": "217",
+                "option_b": "218",
+                "option_c": "224",
+                "option_d": "244",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q8. If all Wicks are Tacks, no Tack is a Bracket, and some Brackets are Cogs, which of the following must be true?",
+                "option_a": "Some Cogs are not Tacks.",
+                "option_b": "No Wick is a Cog.",
+                "option_c": "All Cogs are Brackets.",
+                "option_d": "Some Wicks are Brackets.",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q9. A, B, C, D, and E are sitting in a circle. A is sitting next to B. C is sitting two places away from D. E is sitting to the immediate right of C. If B is sitting to the immediate left of D, who is sitting to the immediate right of A?",
+                "option_a": "B",
+                "option_b": "C",
                 "option_c": "D",
                 "option_d": "E",
                 "correct_answer": "B"
             },
             {
-                "question": "Q10. If DOG → FQI then CAT → ?",
-                "option_a": "ECV",
-                "option_b": "EDX",
-                "option_c": "DBU",
-                "option_d": "FCW",
+                "question": "Q10. If in a certain code language, 'PRIME' is coded as 'KSNRI', how is 'BINARY' coded?",
+                "option_a": "YRMZIB",
+                "option_b": "YRMXIB",
+                "option_c": "ZSNYJC",
+                "option_d": "XQLWGA",
                 "correct_answer": "A"
             },
             {
-                "question": "Q11. What is the output?\n\n```python\nx = [10, 20, 30]\nprint(x[-2])\n```",
-                "option_a": "10",
-                "option_b": "20",
-                "option_c": "30",
-                "option_d": "ERROR",
+                "question": "Q11. What is the output of the following Python code?\n\n```python\nfuncs = [lambda x: x * i for i in range(3)]\nprint([f(2) for f in funcs])\n```",
+                "option_a": "[0, 2, 4]",
+                "option_b": "[4, 4, 4]",
+                "option_c": "[2, 2, 2]",
+                "option_d": "[0, 0, 0]",
                 "correct_answer": "B"
             },
             {
-                "question": "Q12. What is the output of the following Python code?\n\n```python\ndef fun(x=[]):\n    x.append(5)\n    return x\n\nprint(fun())\nprint(fun())\n```",
-                "option_a": "[5][5]",
-                "option_b": "[5][5,5]",
-                "option_c": "ERROR",
-                "option_d": "[][]",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Q13. Which of the following is true?",
-                "option_a": "Java supports multiple inheritance using classes.",
-                "option_b": "Java supports inheritance using classes.",
-                "option_c": "Java does not support interfaces.",
-                "option_d": "Java has no inheritance",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Q14. Which query returns the second highest salary?",
-                "option_a": "SELECT MAX(salary) FROM employee;",
-                "option_b": "SELECT MIN(salary) FROM employee;",
-                "option_c": "SELECT MAX(salary) FROM employee WHERE salary < (SELECT MAX(salary) FROM employee);",
-                "option_d": "SELECT salary,FROM employee;",
+                "question": "Q12. In Python, which of the following execution styles will successfully bypass the Global Interpreter Lock (GIL) to utilize multiple CPU cores for CPU-bound tasks?",
+                "option_a": "threading.Thread",
+                "option_b": "asyncio event loops",
+                "option_c": "multiprocessing.Process",
+                "option_d": "gevent greenlets",
                 "correct_answer": "C"
             },
             {
-                "question": "Q15. Which HTTP status code means 'Resource Created Successfully'?",
-                "option_a": "200",
-                "option_b": "201",
-                "option_c": "204",
-                "option_d": "404",
+                "question": "Q13. What will be printed by the following Java code?\n\n```java\nString s1 = \"hello\";\nString s2 = new String(\"hello\");\nString s3 = s2.intern();\nSystem.out.println((s1 == s2) + \" \" + (s1 == s3));\n```",
+                "option_a": "true true",
+                "option_b": "false false",
+                "option_c": "false true",
+                "option_d": "true false",
+                "correct_answer": "C"
+            },
+            {
+                "question": "Q14. Which SQL clause allows you to assign a unique sequential integer to rows within a partition of a result set, starting at 1 for the first row in each partition?",
+                "option_a": "DENSE_RANK() OVER (PARTITION BY ... ORDER BY ...)",
+                "option_b": "ROW_NUMBER() OVER (PARTITION BY ... ORDER BY ...)",
+                "option_c": "RANK() OVER (PARTITION BY ... ORDER BY ...)",
+                "option_d": "NTILE(1) OVER (PARTITION BY ... ORDER BY ...)",
                 "correct_answer": "B"
             },
             {
-                "question": "Q16. What is the output of the following Python code?\n\n```python\na = \"Python\"\nprint(a[::-1])\n```",
-                "option_a": "Python",
-                "option_b": "nohtyP",
-                "option_c": "Error",
-                "option_d": "P",
+                "question": "Q15. Which CORS header must a server include in its HTTP response to allow a browser script running on 'https://example.com' to read the response?",
+                "option_a": "Access-Control-Allow-Origin: https://example.com",
+                "option_b": "Access-Control-Request-Headers: Origin",
+                "option_c": "Sec-Fetch-Mode: cors",
+                "option_d": "Access-Control-Allow-Methods: GET, POST",
+                "correct_answer": "A"
+            },
+            {
+                "question": "Q16. What is the primary mechanism in Python to customize the creation and initialization of class objects themselves (not instances of classes)?",
+                "option_a": "The __init__ constructor",
+                "option_b": "Inheriting from object",
+                "option_c": "Creating a custom Metaclass using __new__ of type",
+                "option_d": "Decorating methods with @classmethod",
+                "correct_answer": "C"
+            },
+            {
+                "question": "Q17. What does calling next(g) do on a generator function g containing a yield statement?",
+                "option_a": "Restarts the generator from the beginning",
+                "option_b": "Resumes execution up to the next yield expression, returning its value",
+                "option_c": "Terminates the generator and throws StopIteration",
+                "option_d": "Creates a copy of the generator",
                 "correct_answer": "B"
             },
             {
-                "question": "Q17. What is the output of the following Python code?\n\n```python\nprint(bool([]))\n```",
-                "option_a": "True",
-                "option_b": "False",
-                "option_c": "Error",
-                "option_d": "None",
+                "question": "Q18. Which of the following problems cannot be solved optimally using a standard Greedy algorithm?",
+                "option_a": "Fractional Knapsack Problem",
+                "option_b": "0/1 Knapsack Problem",
+                "option_c": "Dijkstra's Single Source Shortest Path (non-negative weights)",
+                "option_d": "Huffman Coding",
                 "correct_answer": "B"
             },
             {
-                "question": "Q18. Which data structure is used in Breadth-First Search (BFS)?",
-                "option_a": "Stack",
-                "option_b": "Queue",
-                "option_c": "Linked List",
-                "option_d": "Heap",
+                "question": "Q19. What is the maximum height of an AVL tree with N nodes, and how does it compare to a Red-Black tree with the same number of nodes?",
+                "option_a": "AVL height is exactly O(N); Red-Black is O(log N)",
+                "option_b": "AVL height is bounded by ~1.44 log2 N; Red-Black is bounded by ~2 log2 N (AVL is more strictly balanced)",
+                "option_c": "AVL height is bounded by ~2 log2 N; Red-Black is bounded by ~1.44 log2 N",
+                "option_d": "Both heights are exactly log2 N",
                 "correct_answer": "B"
             },
             {
-                "question": "Q19. What is the time complexity of Binary Search?",
-                "option_a": "O(n)",
-                "option_b": "O(log n)",
-                "option_c": "O(n log n)",
-                "option_d": "O(1)",
-                "correct_answer": "B"
-            },
-            {
-                "question": "Q20. Which sorting algorithm has the best average-case time complexity among these?",
-                "option_a": "Bubble Sort",
-                "option_b": "Selection Sort",
-                "option_c": "Merge Sort",
-                "option_d": "Insertion Sort",
+                "question": "Q20. Which phase of TCP congestion control is triggered when a sender detects a packet loss via three duplicate ACKs (Fast Retransmit)?",
+                "option_a": "Slow Start",
+                "option_b": "Congestion Avoidance",
+                "option_c": "Fast Recovery (entering Congestion Avoidance directly, bypassing Slow Start)",
+                "option_d": "Connection Tear-down",
                 "correct_answer": "C"
             }
         ]
