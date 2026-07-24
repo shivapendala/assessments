@@ -6,10 +6,10 @@ import os
 bind = os.environ.get('BIND', '0.0.0.0:8000')
 
 # ── Workers ──────────────────────────────────────────────────
-# 8 gevent async workers × 2000 connections = 16,000 max concurrent connections
-workers = int(os.environ.get('WORKERS', 8))
-worker_class = 'gevent'
-worker_connections = int(os.environ.get('WORKER_CONNECTIONS', 2000))
+workers = int(os.environ.get('WORKERS', 4))
+worker_class = 'gthread'
+threads = 4
+worker_connections = 1000
 
 # ── Max Requests (prevents memory leaks in long-running workers) ─────────────
 # Workers are recycled after this many requests (+ random jitter to avoid
