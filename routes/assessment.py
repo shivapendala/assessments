@@ -42,15 +42,20 @@ def start():
         session.clear()
         return redirect(url_for('candidate.register'))
 
-    selected_track = session.get('selected_track', 'IT')
+    target_drive_id = request.form.get('assessment_id', type=int) or session.get('selected_assessment_id')
     from routes.candidate import _get_active_assessments
     all_assessments = _get_active_assessments()
-    if selected_track == 'Non-IT':
-        active_assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
+
+    if target_drive_id:
+        active_assessment = db.session.get(Assessment, target_drive_id)
     else:
-        active_assessment = next((a for a in all_assessments if 'IT' in a.title and 'Non-IT' not in a.title), None)
-    if not active_assessment and all_assessments:
-        active_assessment = all_assessments[0]
+        selected_track = session.get('selected_track', 'IT')
+        if selected_track == 'Non-IT':
+            active_assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
+        else:
+            active_assessment = next((a for a in all_assessments if 'IT' in a.title and 'Non-IT' not in a.title), None)
+        if not active_assessment and all_assessments:
+            active_assessment = all_assessments[0]
 
     if not active_assessment:
         flash('The selected assessment is currently not available.', 'warning')
@@ -290,7 +295,7 @@ def submit():
     )
     total = len(questions)
     percentage = (correct / total * 100) if total > 0 else 0
-    pass_pct = submission.assessment.pass_percentage if submission.assessment else 60.0
+    pass_pct = submission.assessment.pass_percentage if submission.assessment else 25.0
     status = 'pass' if percentage >= pass_pct else 'fail'
 
     submission.score = correct

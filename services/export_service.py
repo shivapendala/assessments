@@ -12,6 +12,7 @@ from openpyxl.styles import (
 from openpyxl.utils import get_column_letter
 from flask import make_response
 
+from sqlalchemy import func
 from models.models import Submission, db
 
 
@@ -201,3 +202,163 @@ def export_xlsx(search: str = '', assessment_id: int = None, status: str = None)
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
     )
     return response
+
+
+# ─────────────────────────────────────────────
+# Daily Assessment Reports Helper & Exports
+# ─────────────────────────────────────────────
+
+def _get_daily_report_data(start_date: str = '', end_date: str = '', assessment_id: int = None):
+    """Fetch daily aggregated assessment data."""
+    date_col = func.date(Submission.submitted_at)
+
+    query = (
+        db.session.query(
+            date_col.label('report_date'),
+            func.count(Submission.id).label('total'),
+            func.sum(db.case((Submission.status == 'pass', 1), else_=0)).label('passed'),
+            func.sum(db.case((Submission.status == 'fail', 1), else_=0)).label('failed'),
+            func.avg(Submission.percentage).label('avg_percentage'),
+            func.max(Submission.score).label('max_score'),
+            func.min(Submission.score).label('min_score')
+        )
+        .filter(Submission.status != 'in_progress', Submission.submitted_at.isnot(None))
+    )
+
+    if assessment_id:
+        query = query.filter(Submission.assessment_id == assessment_id)
+    if start_date:
+        query = query.filter(date_col >= start_date)
+    if end_date:
+        query = query.filter(date_col <= end_date)
+
+    daily_stats = (
+        query.group_by(date_col)
+        .order_by(date_col.desc())
+        .all()
+    )
+
+    reports = []
+    for row in daily_stats:
+        t = row.total or 0
+        p = int(row.passed or 0)
+        f = int(row.failed or 0)
+        pass_rate = round((p / t * 100), 1) if t > 0 else 0.0
+        avg_pct = round(row.avg_percentage or 0.0, 1)
+
+        reports.append({
+            'date': str(row.report_date),
+            'total': t,
+            'passed': p,
+            'failed': f,
+            'pass_rate': pass_rate,
+            'avg_percentage': avg_pct,
+            'max_score': row.max_score or 0,
+            'min_score': row.min_score or 0
+        })
+    return reports
+
+
+DAILY_HEADERS = [
+    'Date', 'Total Candidates', 'Passed Count', 'Failed Count',
+    'Pass Rate (%)', 'Avg Score (%)', 'Max Score', 'Min Score'
+]
+
+
+def export_daily_reports_csv(start_date: str = '', end_date: str = '', assessment_id: int = None):
+    """Return CSV download of daily assessment reports."""
+    from flask import Response
+    reports = _get_daily_report_data(start_date, end_date, assessment_id)
+
+    def generate():
+        output = io.StringIO()
+        writer = csv.writer(output)
+        writer.writerow(DAILY_HEADERS)
+        yield output.getvalue()
+        output.seek(0)
+        output.truncate(0)
+
+        for r in reports:
+            writer.writerow([
+                r['date'], r['total'], r['passed'], r['failed'],
+                r['pass_rate'], r['avg_percentage'], r['max_score'], r['min_score']
+            ])
+            yield output.getvalue()
+            output.seek(0)
+            output.truncate(0)
+
+    filename = f'elevateiq_daily_assessment_reports_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.csv'
+    return Response(
+        generate(),
+        mimetype='text/csv; charset=utf-8',
+        headers={'Content-Disposition': f'attachment; filename="{filename}"'}
+    )
+
+
+def export_daily_reports_xlsx(start_date: str = '', end_date: str = '', assessment_id: int = None):
+    """Return XLSX download of daily assessment reports."""
+    reports = _get_daily_report_data(start_date, end_date, assessment_id)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Daily Reports'
+
+    header_fill = PatternFill('solid', fgColor='2D1B69')
+    header_font = Font(bold=True, color='FFFFFF', size=11)
+    pass_fill = PatternFill('solid', fgColor='D1FAE5')
+    alt_fill = PatternFill('solid', fgColor='F5F3FF')
+    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left = Alignment(horizontal='left', vertical='center', wrap_text=True)
+    thin = Side(style='thin', color='C4B5FD')
+    border = Border(left=thin, right=thin, top=thin, bottom=thin)
+
+    col_widths = [16, 18, 16, 16, 16, 16, 14, 14]
+
+    # Title row
+    ws.merge_cells('A1:H1')
+    title_cell = ws['A1']
+    title_cell.value = f'ElevateIQ — Day-by-Day Assessment Reports Export ({datetime.utcnow().strftime("%d %b %Y %H:%M UTC")})'
+    title_cell.font = Font(bold=True, color='4C1D95', size=13)
+    title_cell.fill = PatternFill('solid', fgColor='EDE9FE')
+    title_cell.alignment = center
+    ws.row_dimensions[1].height = 26
+
+    # Header row
+    ws.append(DAILY_HEADERS)
+    for col_idx, header in enumerate(DAILY_HEADERS, start=1):
+        cell = ws.cell(row=2, column=col_idx)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = center
+        cell.border = border
+    ws.row_dimensions[2].height = 22
+
+    # Data rows
+    for row_idx, r in enumerate(reports, start=3):
+        row_values = [
+            r['date'], r['total'], r['passed'], r['failed'],
+            r['pass_rate'], r['avg_percentage'], r['max_score'], r['min_score']
+        ]
+        ws.append(row_values)
+        for col_idx in range(1, len(DAILY_HEADERS) + 1):
+            cell = ws.cell(row=row_idx, column=col_idx)
+            cell.border = border
+            if row_idx % 2 == 0:
+                cell.fill = alt_fill
+            cell.alignment = center
+
+    # Column widths & freeze
+    for i, width in enumerate(col_widths, start=1):
+        ws.column_dimensions[get_column_letter(i)].width = width
+    ws.freeze_panes = 'A3'
+
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+
+    filename = f'elevateiq_daily_assessment_reports_{datetime.utcnow().strftime("%Y%m%d_%H%M%S")}.xlsx'
+    response = make_response(output.getvalue())
+    response.headers['Content-Disposition'] = f'attachment; filename="{filename}"'
+    response.headers['Content-Type'] = 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+    return response
+

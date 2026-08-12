@@ -73,7 +73,7 @@ class Assessment(db.Model):
     title = db.Column(db.String(255), nullable=False)
     description = db.Column(db.Text, nullable=True)
     duration = db.Column(db.Integer, nullable=False)          # minutes
-    pass_percentage = db.Column(db.Float, nullable=False, default=60.0)
+    pass_percentage = db.Column(db.Float, nullable=False, default=25.0)
     status = db.Column(db.String(20), nullable=False, default='inactive')  # active | inactive
     created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
 

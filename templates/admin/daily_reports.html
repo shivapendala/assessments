@@ -1,0 +1,192 @@
+{% extends "base.html" %}
+{% block title %}Daily Assessment Reports{% endblock %}
+{% block body_class %}admin-page{% endblock %}
+
+{% block body %}
+<div class="admin-layout">
+  <!-- Top Navigation Bar -->
+  <header class="admin-topnav">
+    <div class="topnav-left">
+      <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" class="topnav-brand-img" />
+    </div>
+
+    <nav class="topnav-pill-nav">
+      <a href="{{ url_for('admin.dashboard') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
+        Dashboard
+      </a>
+      <a href="{{ url_for('admin.assessments') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Assessments
+      </a>
+      <a href="{{ url_for('admin.results') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Results
+      </a>
+      <a href="{{ url_for('admin.daily_reports') }}" class="nav-pill-item active">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+        Daily Reports
+      </a>
+    
+      <a href="{{ url_for('admin.report_tech_round_2') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Technical Round 2 Reports
+      </a>
+    </nav>
+
+    <div class="topnav-right">
+      <div class="admin-info">
+        <div class="admin-avatar">{{ current_user.email[0].upper() }}</div>
+        <div class="admin-details">
+          <span class="admin-email">{{ current_user.email }}</span>
+          <span class="admin-role">Administrator</span>
+        </div>
+      </div>
+      <a href="{{ url_for('admin.logout') }}" class="btn-logout" title="Logout"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg></a>
+    </div>
+  </header>
+
+  <main class="admin-main">
+    <header class="page-header">
+      <div>
+        <h1 class="page-title">Day-by-Day Assessment Reports</h1>
+        <p class="page-sub">Aggregated daily metrics, candidate volume, pass rates, and score distributions</p>
+      </div>
+      <div class="header-actions" style="display: flex; gap: 10px; flex-wrap: wrap;">
+        <a href="{{ url_for('admin.export_daily_reports', fmt='xlsx', start_date=start_date, end_date=end_date, assessment_id=selected_assessment_id) }}" class="btn btn-success">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export Excel (.xlsx)
+        </a>
+        <a href="{{ url_for('admin.export_daily_reports', fmt='csv', start_date=start_date, end_date=end_date, assessment_id=selected_assessment_id) }}" class="btn btn-ghost">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+          Export CSV
+        </a>
+      </div>
+    </header>
+
+    <!-- Overview Stat Cards -->
+    <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 16px; margin-bottom: 24px;">
+      <div class="glass-card stat-card" style="padding: 18px 20px;">
+        <div class="stat-label" style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Testing Days Recorded</div>
+        <div class="stat-value" style="font-size: 28px; font-weight: 700; color: #fff; margin-top: 4px;">{{ total_days }}</div>
+        <div class="stat-desc" style="font-size: 12px; color: #a78bfa; margin-top: 4px;">Active Dates</div>
+      </div>
+
+      <div class="glass-card stat-card" style="padding: 18px 20px;">
+        <div class="stat-label" style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Total Candidates Tested</div>
+        <div class="stat-value" style="font-size: 28px; font-weight: 700; color: #3ea6ff; margin-top: 4px;">{{ total_candidates }}</div>
+        <div class="stat-desc" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">{{ total_passed }} Passed | {{ total_failed }} Failed</div>
+      </div>
+
+      <div class="glass-card stat-card" style="padding: 18px 20px;">
+        <div class="stat-label" style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Overall Pass Rate</div>
+        <div class="stat-value" style="font-size: 28px; font-weight: 700; color: #00e676; margin-top: 4px;">{{ overall_pass_rate }}%</div>
+        <div class="stat-desc" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">Average Candidate Success</div>
+      </div>
+
+      <div class="glass-card stat-card" style="padding: 18px 20px;">
+        <div class="stat-label" style="font-size: 12px; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Filter Status</div>
+        <div class="stat-value" style="font-size: 20px; font-weight: 600; color: #ff9100; margin-top: 8px;">
+          {% if selected_assessment_id %}Filtered{% else %}All Drives{% endif %}
+        </div>
+        <div class="stat-desc" style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+          {% if start_date or end_date %}{{ start_date or 'Start' }} to {{ end_date or 'Today' }}{% else %}Complete History{% endif %}
+        </div>
+      </div>
+    </div>
+
+    <!-- Filter Bar -->
+    <div class="glass-card" style="padding: 16px 20px; margin-bottom: 24px;">
+      <form method="GET" action="{{ url_for('admin.daily_reports') }}" style="display: flex; gap: 14px; align-items: flex-end; flex-wrap: wrap;">
+        <div>
+          <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Start Date</label>
+          <input type="date" name="start_date" value="{{ start_date }}" class="search-input" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--bg-tertiary); color: #fff; border-radius: 8px;" />
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">End Date</label>
+          <input type="date" name="end_date" value="{{ end_date }}" class="search-input" style="padding: 8px 12px; background: rgba(255,255,255,0.05); border: 1px solid var(--bg-tertiary); color: #fff; border-radius: 8px;" />
+        </div>
+
+        <div>
+          <label style="display: block; font-size: 12px; color: var(--text-muted); margin-bottom: 4px;">Assessment Drive</label>
+          <select name="assessment_id" style="padding: 8px 12px; background: #0c1928; border: 1px solid var(--bg-tertiary); color: #fff; border-radius: 8px; outline: none; font-size: 13px;">
+            <option value="">All Assessment Drives</option>
+            {% for a in assessments %}
+            <option value="{{ a.id }}" {% if selected_assessment_id == a.id %}selected{% endif %}>{{ a.title }}</option>
+            {% endfor %}
+          </select>
+        </div>
+
+        <div style="display: flex; gap: 8px;">
+          <button type="submit" class="btn btn-primary" style="padding: 8px 18px;">Apply Filters</button>
+          {% if start_date or end_date or selected_assessment_id %}
+          <a href="{{ url_for('admin.daily_reports') }}" class="btn btn-ghost" style="padding: 8px 14px;">Reset</a>
+          {% endif %}
+        </div>
+      </form>
+    </div>
+
+    <!-- Daily Breakdown Table -->
+    <div class="glass-card table-card">
+      <div class="table-wrapper">
+        <table class="data-table">
+          <thead>
+            <tr>
+              <th>Date (YYYY-MM-DD)</th>
+              <th class="text-center">Total Candidates</th>
+              <th class="text-center">Passed Count</th>
+              <th class="text-center">Failed Count</th>
+              <th class="text-center">Pass Rate</th>
+              <th class="text-center">Avg Score %</th>
+              <th class="text-center">Score Range (Max / Min)</th>
+              <th class="text-right">Action</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% if reports %}
+              {% for r in reports %}
+              <tr>
+                <td><strong>{{ r.date }}</strong></td>
+                <td class="text-center">
+                  <span class="badge" style="background: rgba(62,166,255,0.15); color: #3ea6ff; font-weight: 600; font-size: 13px; padding: 4px 10px;">{{ r.total }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge" style="background: rgba(0,230,118,0.15); color: #00e676; font-weight: 600; font-size: 13px; padding: 4px 10px;">✓ {{ r.passed }}</span>
+                </td>
+                <td class="text-center">
+                  <span class="badge" style="background: rgba(239,68,68,0.15); color: #ef4444; font-weight: 600; font-size: 13px; padding: 4px 10px;">✕ {{ r.failed }}</span>
+                </td>
+                <td class="text-center">
+                  <div style="display: flex; align-items: center; justify-content: center; gap: 8px;">
+                    <div style="width: 60px; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden;">
+                      <div style="width: {{ r.pass_rate }}%; height: 100%; background: {% if r.pass_rate >= 70 %}#00e676{% elif r.pass_rate >= 50 %}#ff9100{% else %}#ef4444{% endif %};"></div>
+                    </div>
+                    <strong style="color: {% if r.pass_rate >= 70 %}#00e676{% elif r.pass_rate >= 50 %}#ff9100{% else %}#ef4444{% endif %};">{{ r.pass_rate }}%</strong>
+                  </div>
+                </td>
+                <td class="text-center"><strong>{{ r.avg_percentage }}%</strong></td>
+                <td class="text-center" style="color: var(--text-muted); font-size: 13px;">
+                  Max: <strong style="color: #fff;">{{ r.max_score }}</strong> | Min: <strong style="color: var(--text-muted);">{{ r.min_score }}</strong>
+                </td>
+                <td class="text-right">
+                  <a href="{{ url_for('admin.results') }}?search={{ r.date }}" class="btn btn-ghost" style="padding: 4px 10px; font-size: 12px;">
+                    View Candidates
+                  </a>
+                </td>
+              </tr>
+              {% endfor %}
+            {% else %}
+              <tr>
+                <td colspan="8" style="text-align: center; color: var(--text-muted); padding: 32px;">
+                  No assessment activity found for the selected date range or criteria.
+                </td>
+              </tr>
+            {% endif %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </main>
+</div>
+{% endblock %}

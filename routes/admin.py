@@ -1,19 +1,19 @@
+from app import csrf
 """
 ElevateIQ — Admin Blueprint
 Handles: login/logout, dashboard, assessment CRUD,
          question CRUD, results viewing, and export.
 """
-from flask import (
-    Blueprint, render_template, redirect, url_for,
-    flash, request, session, jsonify
-)
+from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, make_response, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
 from models.models import db, Admin, Assessment, Question, Submission, Candidate
 from services.stats_service import get_dashboard_stats
-from services.export_service import export_csv, export_xlsx
+from services.export_service import (
+    export_csv, export_xlsx, export_daily_reports_csv, export_daily_reports_xlsx, _get_daily_report_data
+)
 from utils.helpers import sanitize_string, api_success, api_error, paginate_query
 from sqlalchemy import func
 
@@ -25,6 +25,7 @@ admin_bp = Blueprint('admin', __name__, url_prefix='/admin')
 # ─────────────────────────────────────────────
 
 @admin_bp.route('/login', methods=['GET', 'POST'])
+@csrf.exempt
 def login():
     if current_user.is_authenticated:
         return redirect(url_for('admin.dashboard'))
@@ -383,3 +384,177 @@ def api_assessment(assessment_id):
 def api_question(question_id):
     q = Question.query.get_or_404(question_id)
     return jsonify(q.to_dict(include_answer=True))
+
+
+# ─────────────────────────────────────────────
+# DAY-BY-DAY ASSESSMENT REPORTS
+# ─────────────────────────────────────────────
+
+@admin_bp.route('/reports')
+@admin_bp.route('/reports/daily')
+@login_required
+def daily_reports():
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    assessment_id = request.args.get('assessment_id', type=int)
+
+    reports = _get_daily_report_data(start_date, end_date, assessment_id)
+
+    total_candidates = sum(r['total'] for r in reports)
+    total_passed = sum(r['passed'] for r in reports)
+    total_failed = sum(r['failed'] for r in reports)
+    overall_pass_rate = round((total_passed / total_candidates * 100), 1) if total_candidates > 0 else 0.0
+
+    assessments_list = Assessment.query.order_by(Assessment.title).all()
+
+    return render_template(
+        'admin/daily_reports.html',
+        reports=reports,
+        total_days=len(reports),
+        total_candidates=total_candidates,
+        total_passed=total_passed,
+        total_failed=total_failed,
+        overall_pass_rate=overall_pass_rate,
+        assessments=assessments_list,
+        selected_assessment_id=assessment_id,
+        start_date=start_date,
+        end_date=end_date
+    )
+
+
+@admin_bp.route('/reports/daily/export')
+@login_required
+def export_daily_reports():
+    fmt = request.args.get('fmt', 'xlsx').lower()
+    start_date = request.args.get('start_date', '').strip()
+    end_date = request.args.get('end_date', '').strip()
+    assessment_id = request.args.get('assessment_id', type=int)
+
+    if fmt == 'csv':
+        return export_daily_reports_csv(start_date=start_date, end_date=end_date, assessment_id=assessment_id)
+    return export_daily_reports_xlsx(start_date=start_date, end_date=end_date, assessment_id=assessment_id)
+
+
+
+@admin_bp.route('/reports/tech-round-2')
+@login_required
+def report_tech_round_2():
+    page = request.args.get('page', 1, type=int)
+    per_page = 25
+
+    query = db.session.query(
+        Candidate.full_name.label('candidate_name'),
+        Candidate.email,
+        Candidate.hall_ticket,
+        Submission.score,
+        Submission.total_questions,
+        Submission.percentage,
+        Submission.status,
+        Submission.submitted_at
+    ).join(Submission, Candidate.id == Submission.candidate_id)     .filter(Submission.assessment_id == 4)     .order_by(Submission.submitted_at.desc())
+
+    pagination = query.paginate(page=page, per_page=per_page, error_out=False)
+
+    return render_template(
+        'admin/reports_tech_2.html',
+        pagination=pagination,
+        reports=pagination.items
+    )
+
+
+@admin_bp.route('/reports/tech-round-2/export/<format_type>')
+@login_required
+def export_tech_round_2_reports(format_type):
+    from io import BytesIO, StringIO
+    import csv
+
+    status_filter = request.args.get('status', '').strip().lower()
+
+    query_base = db.session.query(
+        Candidate.full_name.label('candidate_name'),
+        Candidate.email,
+        Candidate.hall_ticket,
+        Submission.score,
+        Submission.total_questions,
+        Submission.percentage,
+        Submission.status,
+        Submission.submitted_at
+    ).join(Submission, Candidate.id == Submission.candidate_id)     .filter(Submission.assessment_id == 4)
+
+    if status_filter in ('pass', 'passed'):
+        query_base = query_base.filter(Submission.status == 'pass')
+        file_suffix = "PASSED_Candidates"
+    elif status_filter in ('fail', 'failed'):
+        query_base = query_base.filter(Submission.status == 'fail')
+        file_suffix = "FAILED_Candidates"
+    else:
+        file_suffix = "All_Candidates"
+
+    query = query_base.order_by(Submission.submitted_at.desc()).all()
+
+    if format_type == 'csv':
+        si = StringIO()
+        cw = csv.writer(si)
+        cw.writerow(['Candidate Name', 'Email', 'Hall Ticket', 'Score', 'Total Questions', 'Percentage', 'Status', 'Submitted At'])
+        for r in query:
+            cw.writerow([
+                r.candidate_name,
+                r.email,
+                r.hall_ticket,
+                r.score,
+                r.total_questions,
+                f"{r.percentage:.1f}%",
+                r.status.upper(),
+                r.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if r.submitted_at else 'N/A'
+            ])
+        output = make_response(si.getvalue())
+        output.headers["Content-Disposition"] = f"attachment; filename=Technical_Round_2_{file_suffix}.csv"
+        output.headers["Content-type"] = "text/csv"
+        return output
+
+    elif format_type in ('xlsx', 'excel'):
+        try:
+            import openpyxl
+            wb = openpyxl.Workbook()
+            ws = wb.active
+            ws.title = "Tech Round 2 Results"
+            ws.append(['Candidate Name', 'Email', 'Hall Ticket', 'Score', 'Total Questions', 'Percentage', 'Status', 'Submitted At'])
+            for r in query:
+                ws.append([
+                    r.candidate_name,
+                    r.email,
+                    r.hall_ticket,
+                    r.score,
+                    r.total_questions,
+                    f"{r.percentage:.1f}%",
+                    r.status.upper(),
+                    r.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if r.submitted_at else 'N/A'
+                ])
+            out = BytesIO()
+            wb.save(out)
+            out.seek(0)
+            output = make_response(out.getvalue())
+            output.headers["Content-Disposition"] = f"attachment; filename=Technical_Round_2_{file_suffix}.xlsx"
+            output.headers["Content-type"] = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"
+            return output
+        except Exception as ex:
+            si = StringIO()
+            cw = csv.writer(si)
+            cw.writerow(['Candidate Name', 'Email', 'Hall Ticket', 'Score', 'Total Questions', 'Percentage', 'Status', 'Submitted At'])
+            for r in query:
+                cw.writerow([
+                    r.candidate_name,
+                    r.email,
+                    r.hall_ticket,
+                    r.score,
+                    r.total_questions,
+                    f"{r.percentage:.1f}%",
+                    r.status.upper(),
+                    r.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if r.submitted_at else 'N/A'
+                ])
+            output = make_response(si.getvalue())
+            output.headers["Content-Disposition"] = f"attachment; filename=Technical_Round_2_{file_suffix}.csv"
+            output.headers["Content-type"] = "text/csv"
+            return output
+
+    return redirect(url_for('admin.report_tech_round_2'))

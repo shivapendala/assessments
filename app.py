@@ -43,6 +43,9 @@ def create_app(config_class=None):
     csrf.init_app(app)
     cache.init_app(app)
 
+    with app.app_context():
+        db.create_all()
+
     # Flask-Login
     login_manager.init_app(app)
     login_manager.login_view = 'admin.login'

@@ -25,9 +25,12 @@
       </p>
 
       <!-- Primary CTA Actions -->
-      <div style="display: flex; gap: var(--space-4); justify-content: center; margin-bottom: 40px;">
+      <div style="display: flex; gap: 16px; justify-content: center; align-items: center; flex-wrap: wrap; margin-bottom: 40px;">
         <a href="{{ url_for('candidate.register') }}" class="btn btn-primary btn-lg" style="min-width: 200px;">
-          Start Registration
+          Start Registration (Round 1)
+        </a>
+        <a href="{{ url_for('candidate.login') }}" class="btn btn-secondary btn-lg" style="min-width: 200px; background: rgba(124, 58, 237, 0.2); border: 1px solid rgba(124, 58, 237, 0.5); color: #fff;">
+          Candidate Login (Round 2)
         </a>
         <a href="{{ url_for('admin.login') }}" class="btn btn-ghost btn-lg" style="min-width: 180px;">
           Admin Sign In

@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+{% block title %}Candidate Login — ElevateIQ{% endblock %}
+{% block body_class %}auth-page{% endblock %}
+
+{% block body %}
+<div class="auth-bg">
+  <div class="auth-orb orb-1"></div>
+  <div class="auth-orb orb-2"></div>
+  <div class="auth-orb orb-3"></div>
+
+  <div class="auth-container" style="max-width: 520px;">
+    <div class="auth-card glass-card" style="padding: 40px;">
+      
+      <!-- Logo -->
+      <div class="auth-logo" style="justify-content: center; margin-bottom: 20px;">
+        <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" style="max-height: 50px; width: auto;" />
+      </div>
+
+      <div style="text-align: center; margin-bottom: 28px;">
+        <span style="display:inline-block; padding: 4px 12px; background: rgba(124, 58, 237, 0.15); color: #a78bfa; border: 1px solid rgba(124, 58, 237, 0.3); border-radius: 100px; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
+          Existing Candidate Login
+        </span>
+        <h2 style="color: #fff; font-weight: 700; font-size: 24px; margin: 0 0 8px;">Technical Round 2 Login</h2>
+        <p style="color: #94a3b8; font-size: 14px; margin: 0;">Enter your registered Hall Ticket or Email to start Technical Round 2</p>
+      </div>
+
+      <form method="POST" action="{{ url_for('candidate.login') }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        
+        <div class="form-group" style="margin-bottom: 20px;">
+          <label for="hall_ticket" style="display:block; color:#cbd5e1; font-size:13px; font-weight:600; margin-bottom:8px;">Hall Ticket Number</label>
+          <input type="text" id="hall_ticket" name="hall_ticket" class="form-control" placeholder="e.g. Y22CS2635 or 1411108952" style="width:100%; padding:12px 16px; background:rgba(15, 23, 42, 0.6); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:#fff; font-size:15px;" autofocus />
+        </div>
+
+        <div style="text-align:center; color:#64748b; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:1px; margin: 16px 0;">— OR —</div>
+
+        <div class="form-group" style="margin-bottom: 28px;">
+          <label for="email" style="display:block; color:#cbd5e1; font-size:13px; font-weight:600; margin-bottom:8px;">Registered Email Address</label>
+          <input type="email" id="email" name="email" class="form-control" placeholder="name@example.com" style="width:100%; padding:12px 16px; background:rgba(15, 23, 42, 0.6); border:1px solid rgba(255,255,255,0.15); border-radius:10px; color:#fff; font-size:15px;" />
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-lg" style="width:100%; padding:14px; font-weight:700; font-size:15px; border-radius:10px; cursor:pointer;">
+          Log In & Attempt Round 2
+        </button>
+      </form>
+
+      <div style="text-align: center; margin-top: 24px; padding-top: 16px; border-top: 1px solid rgba(255,255,255,0.08);">
+        <p style="color: #94a3b8; font-size: 13px; margin: 0;">
+          New Candidate? <a href="{{ url_for('candidate.register') }}" style="color: #a78bfa; font-weight: 600; text-decoration: none;">Register for Round 1</a>
+        </p>
+      </div>
+
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,3 +1,4 @@
+from app import csrf
 """
 ElevateIQ — Candidate Blueprint
 Handles: registration, candidate dashboard.
@@ -132,47 +133,17 @@ def dashboard():
         session.clear()
         return redirect(url_for('candidate.register'))
 
-    # Single query to fetch all submissions for this candidate (consolidates 2 queries into 1)
     user_submissions = Submission.query.filter_by(candidate_id=candidate_id).all()
 
-    # Force single attempt limit: redirect to results page if completed
-    completed_sub = next((s for s in user_submissions if s.status != 'in_progress'), None)
-    if completed_sub:
-        return redirect(url_for('assessment.result', submission_id=completed_sub.id))
-
-    selected_track = session.get('selected_track')
-
-    if not selected_track:
-        # Show track selection screen
-        return render_template(
-            'candidate/dashboard.html',
-            candidate=candidate,
-            show_selection=True
-        )
-
-    # Fetch corresponding active assessment based on selected track (cached — no DB hit)
-    all_assessments = _get_active_assessments()
-    if selected_track == 'Non-IT':
-        assessment = next((a for a in all_assessments if 'Non-IT' in a.title), None)
-    else:
-        assessment = next((a for a in all_assessments if 'IT' in a.title and 'Non-IT' not in a.title), None)
-    if not assessment and all_assessments:
-        assessment = all_assessments[0]
-
-    # Check if already attempted (from pre-fetched list — zero extra DB queries)
-    existing_submission = None
-    if assessment:
-        existing_submission = next((s for s in user_submissions if s.assessment_id == assessment.id), None)
+    sub_round1 = next((s for s in user_submissions if s.assessment_id in (1, 2, 3) and s.status != 'in_progress'), None)
+    sub_round2 = next((s for s in user_submissions if s.assessment_id == 4 and s.status != 'in_progress'), None)
 
     return render_template(
         'candidate/dashboard.html',
         candidate=candidate,
-        assessment=assessment,
-        existing_submission=existing_submission,
-        selected_track=selected_track,
-        show_selection=False
+        sub_round1=sub_round1,
+        sub_round2=sub_round2
     )
-
 
 @candidate_bp.route('/select-track', methods=['POST'])
 @candidate_required
@@ -209,3 +180,26 @@ def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('candidate.register'))
+
+
+@candidate_bp.route('/login', methods=['GET', 'POST'])
+@csrf.exempt
+def login():
+    if request.method == 'POST':
+        hall_ticket = request.form.get('hall_ticket', '').strip().upper()
+        email = request.form.get('email', '').strip().lower()
+
+        candidate = None
+        if hall_ticket:
+            candidate = Candidate.query.filter_by(hall_ticket=hall_ticket).first()
+        elif email:
+            candidate = Candidate.query.filter_by(email=email).first()
+
+        if candidate:
+            session['candidate_id'] = candidate.id
+            flash(f'Welcome back, {candidate.full_name}!', 'success')
+            return redirect(url_for('candidate.dashboard'))
+        else:
+            flash('Candidate not found with this Hall Ticket/Email. Please check your credentials or register.', 'danger')
+
+    return render_template('candidate/login.html')
