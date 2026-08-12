@@ -58,12 +58,10 @@ def fix_database_uri(uri: str) -> str:
     return uri
 
 
-DEFAULT_NEON_URI = 'postgresql+psycopg2://neondb_owner:npg_cS5VsRvqxl9H@ep-icy-dust-ainl946k-pooler.c-4.us-east-1.aws.neon.tech/neondb?sslmode=require'
-
 class DevelopmentConfig(Config):
     DEBUG = True
-    _db_raw = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL')
-    SQLALCHEMY_DATABASE_URI = fix_database_uri(_db_raw) if _db_raw else DEFAULT_NEON_URI
+    _db_raw = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL', '')
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(_db_raw) if _db_raw else 'sqlite:///assessment_dev.db'
     SESSION_COOKIE_SECURE = False
     WTF_CSRF_ENABLED = True
     SQLALCHEMY_ENGINE_OPTIONS = engine_options
@@ -72,8 +70,8 @@ class DevelopmentConfig(Config):
 class ProductionConfig(Config):
     DEBUG = False
     TESTING = False
-    _db_raw = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL')
-    SQLALCHEMY_DATABASE_URI = fix_database_uri(_db_raw) if _db_raw else DEFAULT_NEON_URI
+    _db_raw = os.environ.get('ASSESSMENT_DATABASE_URL') or os.environ.get('DATABASE_URL', '')
+    SQLALCHEMY_DATABASE_URI = fix_database_uri(_db_raw) if _db_raw else 'sqlite:///assessment.db'
     SQLALCHEMY_ENGINE_OPTIONS = engine_options
 
 
