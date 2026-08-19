@@ -138,18 +138,26 @@ def dashboard():
     sub_round1 = next((s for s in user_submissions if s.assessment_id in (1, 2, 3) and s.status != 'in_progress'), None)
     sub_round2 = next((s for s in user_submissions if s.assessment_id == 4 and s.status != 'in_progress'), None)
 
+    in_prog_round1 = next((s for s in user_submissions if s.assessment_id in (1, 2, 3) and s.status == 'in_progress'), None)
+    in_prog_round2 = next((s for s in user_submissions if s.assessment_id == 4 and s.status == 'in_progress'), None)
+
+    round1_assessments = Assessment.query.filter(Assessment.id.in_([1, 2, 3]), Assessment.status == 'active').order_by(Assessment.id).all()
+
     return render_template(
         'candidate/dashboard.html',
         candidate=candidate,
         sub_round1=sub_round1,
-        sub_round2=sub_round2
+        sub_round2=sub_round2,
+        in_prog_round1=in_prog_round1,
+        in_prog_round2=in_prog_round2,
+        round1_assessments=round1_assessments
     )
+
 
 @candidate_bp.route('/select-track', methods=['POST'])
 @candidate_required
 def select_track():
     candidate_id = session['candidate_id']
-    # Block track selection if they have any submission in progress or completed
     existing = Submission.query.filter_by(candidate_id=candidate_id).first()
     if existing:
         flash('You already have an active or completed assessment session.', 'warning')
@@ -166,7 +174,6 @@ def select_track():
 @candidate_required
 def change_track():
     candidate_id = session['candidate_id']
-    # If they already have an in-progress submission, block changing track
     in_progress = Submission.query.filter_by(candidate_id=candidate_id, status='in_progress').first()
     if in_progress:
         flash('Cannot change track while an assessment is in progress.', 'danger')

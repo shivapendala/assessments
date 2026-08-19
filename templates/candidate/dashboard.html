@@ -58,7 +58,12 @@
     transform: translateY(-4px);
     box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
   }
-  .stage-card-active {
+  .stage-card-active-blue {
+    border: 2px solid #2563eb !important;
+    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%);
+    box-shadow: 0 0 30px rgba(37, 99, 235, 0.25);
+  }
+  .stage-card-active-purple {
     border: 2px solid #7c3aed !important;
     background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%);
     box-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
@@ -73,6 +78,24 @@
     margin-right: 6px;
     margin-bottom: 6px;
     display: inline-block;
+  }
+  .btn-start-round1 {
+    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+    color: #ffffff !important;
+    font-weight: 800;
+    font-size: 16px;
+    padding: 16px;
+    border-radius: 12px;
+    border: none;
+    width: 100%;
+    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
+    transition: all 0.25s ease;
+    cursor: pointer;
+  }
+  .btn-start-round1:hover {
+    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
+    transform: translateY(-2px);
+    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.6);
   }
   .btn-start-round2 {
     background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
@@ -140,16 +163,22 @@
       
       <!-- Stage 1 Card -->
       <div class="col-md-6">
-        <div class="stage-card">
+        <div class="stage-card stage-card-active-blue">
           <div>
-            <span style="background: rgba(148, 163, 184, 0.2); color: #cbd5e1; font-size: 11px; font-weight: 700; padding: 4px 10px; border-radius: 50px; text-transform: uppercase;">STAGE 1</span>
-            <h4 class="fw-bold text-white mt-2 mb-2">Round 1 Assessment</h4>
-            <p style="color: #94a3b8; font-size: 14px;">General Aptitude, Technical & Domain Foundation Drive</p>
+            <span style="background: #2563eb; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 50px; text-transform: uppercase;">STAGE 1 — ROUND 1</span>
+            <h4 class="fw-bold text-white mt-2 mb-2" style="color: #60a5fa !important;">Round 1 Assessment</h4>
+            <p style="color: #cbd5e1; font-size: 14px;">General Aptitude, Technical & Domain Foundation Drive</p>
+            
+            <div class="mt-3">
+              <span class="meta-tag">⏱️ 20 Minutes</span>
+              <span class="meta-tag">📝 20–30 Questions</span>
+              <span class="meta-tag">🎯 25% Pass Cutoff</span>
+            </div>
           </div>
 
-          <div class="mt-4 pt-3" style="border-top: 1px solid rgba(255,255,255,0.1);">
+          <div class="mt-4 pt-3" style="border-top: 1px solid rgba(37, 99, 235, 0.3);">
             {% if sub_round1 %}
-              <div class="result-score-box">
+              <div class="result-score-box" style="background: rgba(37, 99, 235, 0.1);">
                 <div class="d-flex justify-content-between align-items-center mb-1">
                   <span style="color: #e2e8f0; font-weight: 600;">Score: {{ sub_round1.score }}/{{ sub_round1.total_questions }}</span>
                   {% if sub_round1.status == 'pass' %}
@@ -160,14 +189,41 @@
                 </div>
                 <div style="color: #94a3b8; font-size: 13px;">Percentage: <strong class="text-white">{{ "%.1f"|format(sub_round1.percentage) }}%</strong></div>
               </div>
-              <a href="{{ url_for('assessment.result', submission_id=sub_round1.id) }}" class="btn btn-outline-light w-100 py-2 fw-semibold" style="border-color: rgba(255,255,255,0.2);">
+              <a href="{{ url_for('assessment.result', submission_id=sub_round1.id) }}" class="btn btn-outline-light w-100 py-2 fw-semibold" style="border-color: rgba(37, 99, 235, 0.5);">
                 View Round 1 Scorecard
               </a>
+            {% elif in_prog_round1 %}
+              <div class="alert alert-info py-2 px-3 mb-3" style="background: rgba(37, 99, 235, 0.2); border-color: rgba(37, 99, 235, 0.4); color: #93c5fd; font-size: 13px;">
+                ⚠️ You have an active assessment session in progress.
+              </div>
+              <form method="POST" action="{{ url_for('assessment.start') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="assessment_id" value="{{ in_prog_round1.assessment_id }}"/>
+                <button type="submit" class="btn-start-round1">
+                  ▶️ Resume Round 1 Assessment
+                </button>
+              </form>
             {% else %}
-              <span class="badge bg-warning text-dark mb-3">Not Attempted</span>
-              <a href="{{ url_for('candidate.register') }}" class="btn btn-outline-primary w-100 py-2 fw-semibold">
-                Register for Round 1
-              </a>
+              <form method="POST" action="{{ url_for('assessment.start') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <div class="mb-3 text-start">
+                  <label class="form-label small fw-semibold text-white-50">Select Your Domain / Specialization Track:</label>
+                  <select name="assessment_id" class="form-select text-white" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 10px 14px; font-size: 14px;">
+                    {% if round1_assessments %}
+                      {% for a in round1_assessments %}
+                        <option value="{{ a.id }}">{{ a.title }} ({{ a.duration }} Mins)</option>
+                      {% endfor %}
+                    {% else %}
+                      <option value="1">Comprehensive IT & Software Engineering (20 Mins)</option>
+                      <option value="2">Non-IT, Healthcare BPO & Operations (20 Mins)</option>
+                      <option value="3">Pharmacy & Life Sciences (20 Mins)</option>
+                    {% endif %}
+                  </select>
+                </div>
+                <button type="submit" class="btn-start-round1">
+                  🚀 Start Round 1 Assessment
+                </button>
+              </form>
             {% endif %}
           </div>
         </div>
@@ -175,9 +231,9 @@
 
       <!-- Stage 2 Card (Technical Round 2) -->
       <div class="col-md-6">
-        <div class="stage-card stage-card-active">
+        <div class="stage-card stage-card-active-purple">
           <div>
-            <span style="background: #7c3aed; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 50px; text-transform: uppercase;">STAGE 2 — ACTIVE</span>
+            <span style="background: #7c3aed; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 50px; text-transform: uppercase;">STAGE 2 — ROUND 2</span>
             <h4 class="fw-bold text-white mt-2 mb-2" style="color: #a78bfa !important;">Technical Round 2</h4>
             <p style="color: #cbd5e1; font-size: 14px;">Medium-Level Core Java, Core Python & Core SQL Assessment</p>
             
@@ -204,6 +260,17 @@
               <a href="{{ url_for('assessment.result', submission_id=sub_round2.id) }}" class="btn btn-outline-light w-100 py-2 fw-semibold" style="border-color: rgba(124, 58, 237, 0.5);">
                 View Round 2 Scorecard
               </a>
+            {% elif in_prog_round2 %}
+              <div class="alert alert-info py-2 px-3 mb-3" style="background: rgba(124, 58, 237, 0.2); border-color: rgba(124, 58, 237, 0.4); color: #c4b5fd; font-size: 13px;">
+                ⚠️ You have an active assessment session in progress.
+              </div>
+              <form method="POST" action="{{ url_for('assessment.start') }}">
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+                <input type="hidden" name="assessment_id" value="4"/>
+                <button type="submit" class="btn-start-round2">
+                  ▶️ Resume Technical Round 2
+                </button>
+              </form>
             {% else %}
               <form method="POST" action="{{ url_for('assessment.start') }}">
                 <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
