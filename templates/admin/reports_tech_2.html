@@ -96,6 +96,21 @@
     padding: 6px 14px;
     border-radius: 50px;
   }
+  .btn-delete-row {
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .btn-delete-row:hover {
+    background: #ef4444;
+    color: #ffffff;
+  }
 </style>
 
 <div class="admin-layout">
@@ -111,9 +126,17 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/></svg>
         Dashboard
       </a>
+      <a href="{{ url_for('admin.assessments') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+        Assessments
+      </a>
+      <a href="{{ url_for('admin.results') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>
+        Results
+      </a>
       <a href="{{ url_for('admin.daily_reports') }}" class="nav-pill-item">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
-        Round 1 Daily Reports
+        Daily Reports
       </a>
       <a href="{{ url_for('admin.report_tech_round_2') }}" class="nav-pill-item active">
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
@@ -165,7 +188,8 @@
               <th>Score</th>
               <th>Percentage</th>
               <th>Result Status</th>
-              <th class="pe-4">Submission Time</th>
+              <th>Submission Time</th>
+              <th class="pe-4 text-center">Action</th>
             </tr>
           </thead>
           <tbody>
@@ -183,11 +207,16 @@
                   <span class="status-badge-fail">✖ FAILED</span>
                 {% endif %}
               </td>
-              <td class="pe-4 text-muted small">{{ r.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if r.submitted_at else 'N/A' }}</td>
+              <td class="text-muted small">{{ r.submitted_at.strftime('%Y-%m-%d %H:%M:%S') if r.submitted_at else 'N/A' }}</td>
+              <td class="pe-4 text-center">
+                <button type="button" class="btn-delete-row" onclick="confirmDeleteTech2({{ r.submission_id }}, '{{ r.candidate_name|replace("'", "\\'") }}')">
+                  🗑️ Delete
+                </button>
+              </td>
             </tr>
             {% else %}
             <tr>
-              <td colspan="7" class="text-center py-5 text-muted">
+              <td colspan="8" class="text-center py-5 text-muted">
                 <div class="py-4">
                   <div style="font-size: 36px; margin-bottom: 8px;">📊</div>
                   <p class="h5 fw-bold text-dark mb-1">No Technical Round 2 Submissions Yet</p>
@@ -203,4 +232,19 @@
 
   </main>
 </div>
+
+<!-- Single Delete Hidden Form -->
+<form id="tech2DeleteForm" method="POST" action="" style="display: none;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+
+<script>
+  function confirmDeleteTech2(submissionId, candidateName) {
+    if (confirm(`Are you sure you want to delete the Technical Round 2 assessment record for ${candidateName}?`)) {
+      const form = document.getElementById('tech2DeleteForm');
+      form.action = `/admin/submissions/${submissionId}/delete`;
+      form.submit();
+    }
+  }
+</script>
 {% endblock %}

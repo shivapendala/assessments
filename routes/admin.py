@@ -2,14 +2,15 @@ from app import csrf
 """
 ElevateIQ — Admin Blueprint
 Handles: login/logout, dashboard, assessment CRUD,
-         question CRUD, results viewing, and export.
+         question CRUD, results viewing, export, and record deletion/clean-up.
 """
+from datetime import datetime
 from flask import Blueprint, render_template, redirect, url_for, flash, request, session, jsonify, make_response, send_file
 from flask_login import login_user, logout_user, login_required, current_user
 from sqlalchemy.exc import IntegrityError
 from sqlalchemy.orm import joinedload
 
-from models.models import db, Admin, Assessment, Question, Submission, Candidate
+from models.models import db, Admin, Assessment, Question, Submission, Candidate, Answer
 from services.stats_service import get_dashboard_stats
 from services.export_service import (
     export_csv, export_xlsx, export_daily_reports_csv, export_daily_reports_xlsx, _get_daily_report_data
@@ -75,7 +76,7 @@ def dashboard():
         # Single query for both passed and failed, split in Python
         recent_results = (
             db.session.query(Submission)
-            .options(joinedload(Submission.candidate))
+            .options(joinedload(Submission.candidate), joinedload(Submission.assessment))
             .filter(Submission.status.in_(['pass', 'fail']))
             .order_by(Submission.submitted_at.desc())
             .limit(20)
@@ -83,13 +84,14 @@ def dashboard():
         )
         passed_results = [r for r in recent_results if r.status == 'pass'][:10]
         failed_results = [r for r in recent_results if r.status == 'fail'][:10]
-        assessments = Assessment.query.order_by(Assessment.created_at.desc()).limit(10).all()
+        assessments = Assessment.query.order_by(Assessment.created_at.desc()).all()
         return render_template(
             'admin/dashboard.html',
             stats=stats,
             passed_results=passed_results,
             failed_results=failed_results,
-            assessments=assessments
+            assessments=assessments,
+            all_assessments=assessments
         )
     except Exception as e:
         db.session.rollback()
@@ -98,7 +100,8 @@ def dashboard():
             stats={'total_candidates': 0, 'total_assessments': 0, 'active_assessments': 0, 'total_attempts': 0, 'passed': 0, 'failed': 0, 'in_progress': 0, 'pass_rate': 0},
             passed_results=[],
             failed_results=[],
-            assessments=[]
+            assessments=[],
+            all_assessments=[]
         )
 
 
@@ -309,7 +312,6 @@ def results():
     status = request.args.get('status', 'all').strip().lower()
     per_page = 20
 
-    from sqlalchemy.orm import joinedload
     query = (
         db.session.query(Submission)
         .options(
@@ -342,6 +344,7 @@ def results():
     total = query.count()
     submissions = query.offset((page - 1) * per_page).limit(per_page).all()
     total_pages = max(1, (total + per_page - 1) // per_page)
+    all_assessments = Assessment.query.order_by(Assessment.title).all()
 
     return render_template(
         'admin/results.html',
@@ -352,6 +355,7 @@ def results():
         search=search,
         status=status,
         per_page=per_page,
+        all_assessments=all_assessments,
     )
 
 
@@ -366,6 +370,78 @@ def export_results():
     if fmt == 'xlsx':
         return export_xlsx(search=search, assessment_id=assessment_id, status=status)
     return export_csv(search=search, assessment_id=assessment_id, status=status)
+
+
+# ─────────────────────────────────────────────
+# SUBMISSION / RECORD DELETION
+# ─────────────────────────────────────────────
+
+@admin_bp.route('/submissions/<int:submission_id>/delete', methods=['POST'])
+@login_required
+def delete_submission(submission_id):
+    submission = Submission.query.get_or_404(submission_id)
+    cand_name = submission.candidate.full_name if submission.candidate else f"Candidate #{submission.candidate_id}"
+    
+    # Delete answers for this submission first
+    Answer.query.filter_by(submission_id=submission.id).delete(synchronize_session=False)
+    db.session.delete(submission)
+    db.session.commit()
+    
+    flash(f'Assessment record for {cand_name} (ID #{submission_id}) has been deleted.', 'success')
+    return redirect(request.referrer or url_for('admin.results'))
+
+
+@admin_bp.route('/submissions/bulk-delete', methods=['POST'])
+@login_required
+def bulk_delete_submissions():
+    submission_ids = request.form.getlist('submission_ids')
+    delete_scope = request.form.get('delete_scope', 'selected')
+    assessment_id = request.form.get('assessment_id', type=int)
+    before_date_str = request.form.get('before_date', '').strip()
+    status_filter = request.form.get('status_filter', '').strip().lower()
+
+    if submission_ids and delete_scope == 'selected':
+        sub_ids = [int(i) for i in submission_ids if str(i).isdigit()]
+        if sub_ids:
+            Answer.query.filter(Answer.submission_id.in_(sub_ids)).delete(synchronize_session=False)
+            deleted_count = Submission.query.filter(Submission.id.in_(sub_ids)).delete(synchronize_session=False)
+            db.session.commit()
+            flash(f'Successfully deleted {deleted_count} selected assessment record(s).', 'success')
+            return redirect(request.referrer or url_for('admin.results'))
+        else:
+            flash('No valid records selected for deletion.', 'warning')
+            return redirect(request.referrer or url_for('admin.results'))
+
+    query = Submission.query
+
+    if assessment_id:
+        query = query.filter(Submission.assessment_id == assessment_id)
+
+    if before_date_str:
+        try:
+            before_date = datetime.strptime(before_date_str, '%Y-%m-%d')
+            query = query.filter(Submission.submitted_at < before_date)
+        except ValueError:
+            flash('Invalid date format provided for clean-up.', 'danger')
+            return redirect(request.referrer or url_for('admin.results'))
+
+    if status_filter in ('pass', 'fail', 'in_progress'):
+        query = query.filter(Submission.status == status_filter)
+
+    records = query.all()
+    count = len(records)
+
+    if count == 0:
+        flash('No assessment records matched the specified criteria.', 'info')
+        return redirect(request.referrer or url_for('admin.results'))
+
+    rec_ids = [r.id for r in records]
+    Answer.query.filter(Answer.submission_id.in_(rec_ids)).delete(synchronize_session=False)
+    Submission.query.filter(Submission.id.in_(rec_ids)).delete(synchronize_session=False)
+    db.session.commit()
+
+    flash(f'Successfully deleted {count} old assessment record(s).', 'success')
+    return redirect(request.referrer or url_for('admin.results'))
 
 
 # ─────────────────────────────────────────────
@@ -435,7 +511,6 @@ def export_daily_reports():
     return export_daily_reports_xlsx(start_date=start_date, end_date=end_date, assessment_id=assessment_id)
 
 
-
 @admin_bp.route('/reports/tech-round-2')
 @login_required
 def report_tech_round_2():
@@ -446,12 +521,15 @@ def report_tech_round_2():
         Candidate.full_name.label('candidate_name'),
         Candidate.email,
         Candidate.hall_ticket,
+        Submission.id.label('submission_id'),
         Submission.score,
         Submission.total_questions,
         Submission.percentage,
         Submission.status,
         Submission.submitted_at
-    ).join(Submission, Candidate.id == Submission.candidate_id)     .filter(Submission.assessment_id == 4)     .order_by(Submission.submitted_at.desc())
+    ).join(Submission, Candidate.id == Submission.candidate_id) \
+     .filter(Submission.assessment_id == 4) \
+     .order_by(Submission.submitted_at.desc())
 
     pagination = query.paginate(page=page, per_page=per_page, error_out=False)
 
@@ -479,7 +557,8 @@ def export_tech_round_2_reports(format_type):
         Submission.percentage,
         Submission.status,
         Submission.submitted_at
-    ).join(Submission, Candidate.id == Submission.candidate_id)     .filter(Submission.assessment_id == 4)
+    ).join(Submission, Candidate.id == Submission.candidate_id) \
+     .filter(Submission.assessment_id == 4)
 
     if status_filter in ('pass', 'passed'):
         query_base = query_base.filter(Submission.status == 'pass')
@@ -542,7 +621,7 @@ def export_tech_round_2_reports(format_type):
             cw = csv.writer(si)
             cw.writerow(['Candidate Name', 'Email', 'Hall Ticket', 'Score', 'Total Questions', 'Percentage', 'Status', 'Submitted At'])
             for r in query:
-                cw.writerow([
+                ws.append([
                     r.candidate_name,
                     r.email,
                     r.hall_ticket,

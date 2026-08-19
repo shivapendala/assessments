@@ -1,8 +1,78 @@
 {% extends "base.html" %}
-{% block title %}Results{% endblock %}
+{% block title %}Results — Admin Portal{% endblock %}
 {% block body_class %}admin-page{% endblock %}
 
 {% block body %}
+<style>
+  .btn-danger-outline {
+    background: transparent;
+    color: #ef4444;
+    border: 1px solid rgba(239, 68, 68, 0.4);
+    padding: 5px 10px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+  }
+  .btn-danger-outline:hover {
+    background: #ef4444;
+    color: #ffffff;
+    border-color: #ef4444;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+  }
+  .modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(5px);
+    z-index: 1000;
+    align-items: center;
+    justify-content: center;
+  }
+  .modal-overlay.active {
+    display: flex;
+  }
+  .modal-box {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 16px;
+    padding: 28px;
+    width: 90%;
+    max-width: 520px;
+    color: #ffffff;
+    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  }
+  .modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+  }
+  .modal-title {
+    font-size: 18px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+  }
+  .modal-close {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 24px;
+    cursor: pointer;
+    line-height: 1;
+  }
+  .modal-close:hover {
+    color: #ffffff;
+  }
+</style>
+
 <div class="admin-layout">
   <!-- Top Navigation Bar -->
   <header class="admin-topnav">
@@ -27,6 +97,10 @@
         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
         Daily Reports
       </a>
+      <a href="{{ url_for('admin.report_tech_round_2') }}" class="nav-pill-item">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>
+        Technical Round 2 Reports
+      </a>
     </nav>
 
     <div class="topnav-right">
@@ -44,25 +118,25 @@
   <main class="admin-main">
     <header class="page-header">
       <div>
-        <h1 class="page-title">Results</h1>
+        <h1 class="page-title">Results & Submissions</h1>
         <p class="page-sub">{{ total }} completed submission{{ 's' if total != 1 else '' }}{% if status in ['pass', 'fail'] %} ({{ status|upper }} ONLY){% endif %}</p>
       </div>
       <div class="header-actions" style="flex-wrap: wrap; gap: 8px;">
+        <button type="button" class="btn btn-danger" onclick="openCleanUpModal()" style="background: #dc2626; border: none; font-weight: 700; display: inline-flex; align-items: center; gap: 6px;">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+          🧹 Clean Up Old Records
+        </button>
         <a href="{{ url_for('admin.export_results', fmt='xlsx', status='pass', search=search) }}" class="btn btn-success" title="Download Excel sheet with PASSED candidates only">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
           Export Passed (Excel)
         </a>
-        <a href="{{ url_for('admin.export_results', fmt='xlsx', status='fail', search=search) }}" class="btn btn-danger" title="Download Excel sheet with FAILED candidates only">
+        <a href="{{ url_for('admin.export_results', fmt='xlsx', status='fail', search=search) }}" class="btn btn-ghost" style="color: #f87171;" title="Download Excel sheet with FAILED candidates only">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           Export Failed (Excel)
         </a>
         <a href="{{ url_for('admin.export_results', fmt='xlsx', status=status, search=search) }}" class="btn btn-ghost" id="export-xlsx" title="Download Excel sheet of currently filtered view">
           <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          Export All (Excel)
-        </a>
-        <a href="{{ url_for('admin.export_results', fmt='csv', status=status, search=search) }}" class="btn btn-ghost" id="export-csv">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
-          CSV
+          Export All
         </a>
       </div>
     </header>
@@ -81,100 +155,212 @@
         </a>
       </div>
 
-      <form method="GET" action="{{ url_for('admin.results') }}" class="search-bar-form" style="margin-bottom: 0; flex: 1; max-width: 420px;">
-        {% if status %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
-        <div class="search-bar">
-          <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-          <input type="text" name="search" value="{{ search }}" class="search-input" placeholder="Search by name, hall ticket, or email…" id="searchInput" />
-          {% if search %}
-          <a href="{{ url_for('admin.results', status=status) }}" class="search-clear">×</a>
-          {% endif %}
+      <div style="display: flex; gap: 10px; align-items: center; flex: 1; justify-content: flex-end;">
+        <button type="button" id="btnDeleteSelected" class="btn btn-danger" style="display: none; padding: 8px 16px; font-size: 13px; font-weight: 700;" onclick="submitBulkDelete()">
+          🗑️ Delete Selected (<span id="selectedCount">0</span>)
+        </button>
+
+        <form method="GET" action="{{ url_for('admin.results') }}" class="search-bar-form" style="margin-bottom: 0; width: 100%; max-width: 360px;">
+          {% if status %}<input type="hidden" name="status" value="{{ status }}" />{% endif %}
+          <div class="search-bar">
+            <svg class="search-icon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input type="text" name="search" value="{{ search }}" class="search-input" placeholder="Search name, hall ticket, email…" id="searchInput" />
+            {% if search %}
+            <a href="{{ url_for('admin.results', status=status) }}" class="search-clear">×</a>
+            {% endif %}
+          </div>
+          <button type="submit" class="btn btn-primary">Search</button>
+        </form>
+      </div>
+    </div>
+
+    <!-- Results Table Form for Bulk Selection -->
+    <form id="bulkDeleteForm" method="POST" action="{{ url_for('admin.bulk_delete_submissions') }}">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="delete_scope" value="selected"/>
+
+      <div class="glass-card table-card">
+        <div class="table-wrapper">
+          <table class="data-table" id="resultsTable">
+            <thead>
+              <tr>
+                <th style="width: 40px; text-align: center;">
+                  <input type="checkbox" id="selectAllCheckbox" onclick="toggleSelectAll(this)" style="cursor: pointer; transform: scale(1.2);" />
+                </th>
+                <th>Hall Ticket</th>
+                <th>Candidate</th>
+                <th>Email</th>
+                <th>Assessment</th>
+                <th class="sortable" data-col="score">Score ↕</th>
+                <th class="sortable" data-col="pct">Percentage ↕</th>
+                <th>Violations</th>
+                <th class="sortable" data-col="status">Status ↕</th>
+                <th class="sortable" data-col="time">Submitted ↕</th>
+                <th style="text-align: center;">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for sub in submissions %}
+              <tr class="result-tr {% if sub.status == 'pass' %}row-pass{% else %}row-fail{% endif %}">
+                <td style="text-align: center;">
+                  <input type="checkbox" name="submission_ids" value="{{ sub.id }}" class="row-checkbox" onchange="updateSelectedCount()" style="cursor: pointer; transform: scale(1.2);" />
+                </td>
+                <td><span class="hall-ticket">{{ sub.candidate.hall_ticket }}</span></td>
+                <td>
+                  <div class="cell-primary">{{ sub.candidate.full_name }}</div>
+                </td>
+                <td class="text-muted text-sm">{{ sub.candidate.email }}</td>
+                <td class="text-sm">{{ sub.assessment.title[:28] }}{% if sub.assessment.title|length > 28 %}…{% endif %}</td>
+                <td class="text-center"><strong>{{ sub.score }} / {{ sub.total_questions }}</strong></td>
+                <td class="text-center">
+                  <span class="pct-pill {% if sub.percentage >= sub.assessment.pass_percentage %}pct-pass{% else %}pct-fail{% endif %}">
+                    {{ "%.2f"|format(sub.percentage) }}%
+                  </span>
+                </td>
+                <td class="text-center">
+                  {% if sub.violations > 0 %}
+                  <span class="violation-badge">⚠ {{ sub.violations }}</span>
+                  {% else %}
+                  <span class="text-muted">—</span>
+                  {% endif %}
+                </td>
+                <td class="text-center">
+                  <span class="badge {% if sub.status == 'pass' %}badge-pass{% else %}badge-fail{% endif %}">
+                    {{ sub.status | upper }}
+                  </span>
+                </td>
+                <td class="text-muted text-sm">
+                  {% if sub.submitted_at_ist %}
+                  {{ sub.submitted_at_ist.strftime('%d %b %Y %I:%M %p') }}
+                  {% else %}—{% endif %}
+                </td>
+                <td style="text-align: center;">
+                  <button type="button" class="btn-danger-outline" onclick="confirmDeleteSingle({{ sub.id }}, '{{ sub.candidate.full_name|replace("'", "\\'") }}')">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                    Delete
+                  </button>
+                </td>
+              </tr>
+              {% else %}
+              <tr><td colspan="11" class="empty-row">No results found{% if search %} for "{{ search }}"{% endif %}.</td></tr>
+              {% endfor %}
+            </tbody>
+          </table>
         </div>
-        <button type="submit" class="btn btn-primary">Search</button>
-      </form>
-    </div>
 
-    <!-- Results Table -->
-    <div class="glass-card table-card">
-      <div class="table-wrapper">
-        <table class="data-table" id="resultsTable">
-          <thead>
-            <tr>
-              <th>Hall Ticket</th>
-              <th>Candidate</th>
-              <th>Email</th>
-              <th>Assessment</th>
-              <th class="sortable" data-col="score">Score ↕</th>
-              <th class="sortable" data-col="pct">Percentage ↕</th>
-              <th>Violations</th>
-              <th class="sortable" data-col="status">Status ↕</th>
-              <th class="sortable" data-col="time">Submitted ↕</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for sub in submissions %}
-            <tr class="result-tr {% if sub.status == 'pass' %}row-pass{% else %}row-fail{% endif %}">
-              <td><span class="hall-ticket">{{ sub.candidate.hall_ticket }}</span></td>
-              <td>
-                <div class="cell-primary">{{ sub.candidate.full_name }}</div>
-              </td>
-              <td class="text-muted text-sm">{{ sub.candidate.email }}</td>
-              <td class="text-sm">{{ sub.assessment.title[:30] }}{% if sub.assessment.title|length > 30 %}…{% endif %}</td>
-              <td class="text-center"><strong>{{ sub.score }} / {{ sub.total_questions }}</strong></td>
-              <td class="text-center">
-                <span class="pct-pill {% if sub.percentage >= sub.assessment.pass_percentage %}pct-pass{% else %}pct-fail{% endif %}">
-                  {{ "%.2f"|format(sub.percentage) }}%
-                </span>
-              </td>
-              <td class="text-center">
-                {% if sub.violations > 0 %}
-                <span class="violation-badge">⚠ {{ sub.violations }}</span>
-                {% else %}
-                <span class="text-muted">—</span>
-                {% endif %}
-              </td>
-              <td class="text-center">
-                <span class="badge {% if sub.status == 'pass' %}badge-pass{% else %}badge-fail{% endif %}">
-                  {{ sub.status | upper }}
-                </span>
-              </td>
-              <td class="text-muted text-sm">
-                {% if sub.submitted_at_ist %}
-                {{ sub.submitted_at_ist.strftime('%d %b %Y %I:%M %p') }} IST
-                {% else %}—{% endif %}
-              </td>
-            </tr>
-            {% else %}
-            <tr><td colspan="9" class="empty-row">No results found{% if search %} for "{{ search }}"{% endif %}.</td></tr>
-            {% endfor %}
-          </tbody>
-        </table>
-      </div>
-
-      <!-- Pagination -->
-      {% if total_pages > 1 %}
-      <div class="pagination">
-        {% if page > 1 %}
-        <a href="{{ url_for('admin.results', page=page-1, search=search, status=status) }}" class="page-btn">← Prev</a>
-        {% endif %}
-        {% for p in range(1, total_pages + 1) %}
-          {% if p == page or p == 1 or p == total_pages or (p >= page - 2 and p <= page + 2) %}
-            <a href="{{ url_for('admin.results', page=p, search=search, status=status) }}"
-               class="page-btn {% if p == page %}page-active{% endif %}">{{ p }}</a>
-          {% elif p == page - 3 or p == page + 3 %}
-            <span class="page-ellipsis">…</span>
-          {% endif %}
-        {% endfor %}
-        {% if page < total_pages %}
-        <a href="{{ url_for('admin.results', page=page+1, search=search, status=status) }}" class="page-btn">Next →</a>
+        {% if total_pages > 1 %}
+        <div class="pagination">
+          <span class="pagination-info">Page {{ page }} of {{ total_pages }} ({{ total }} total)</span>
+          <div class="pagination-buttons">
+            {% if page > 1 %}
+            <a href="{{ url_for('admin.results', page=page-1, search=search, status=status) }}" class="btn btn-ghost">← Prev</a>
+            {% endif %}
+            {% if page < total_pages %}
+            <a href="{{ url_for('admin.results', page=page+1, search=search, status=status) }}" class="btn btn-ghost">Next →</a>
+            {% endif %}
+          </div>
+        </div>
         {% endif %}
       </div>
-      {% endif %}
-    </div>
+    </form>
   </main>
 </div>
-{% endblock %}
 
-{% block scripts %}
-<script src="{{ url_for('static', filename='js/results.js') }}"></script>
+<!-- Single Delete Hidden Form -->
+<form id="singleDeleteForm" method="POST" action="" style="display: none;">
+  <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+</form>
+
+<!-- Modal: Clean Up Old Records -->
+<div class="modal-overlay" id="cleanupModal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <h3 class="modal-title">🧹 Clean Up Old Assessment Records</h3>
+      <button type="button" class="modal-close" onclick="closeCleanUpModal()">&times;</button>
+    </div>
+    <form method="POST" action="{{ url_for('admin.bulk_delete_submissions') }}" onsubmit="return confirm('WARNING: This will permanently delete all assessment records matching the selected criteria. Are you sure?');">
+      <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+      <input type="hidden" name="delete_scope" value="filter"/>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Target Assessment Drive</label>
+        <select name="assessment_id" class="form-select" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 12px;">
+          <option value="">-- All Assessment Drives --</option>
+          {% if all_assessments %}
+            {% for a in all_assessments %}
+              <option value="{{ a.id }}">{{ a.title }}</option>
+            {% endfor %}
+          {% endif %}
+        </select>
+      </div>
+
+      <div style="margin-bottom: 16px;">
+        <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Delete Submissions Before Date</label>
+        <input type="date" name="before_date" class="form-control" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 12px;" />
+        <small style="color: #94a3b8; font-size: 12px;">Leave empty to not restrict by date.</small>
+      </div>
+
+      <div style="margin-bottom: 24px;">
+        <label style="display: block; font-size: 13px; font-weight: 600; margin-bottom: 6px; color: #cbd5e1;">Status Filter</label>
+        <select name="status_filter" class="form-select" style="width: 100%; background: #1e293b; color: #fff; border: 1px solid rgba(255,255,255,0.2); border-radius: 8px; padding: 10px 12px;">
+          <option value="">All Statuses (Passed & Failed)</option>
+          <option value="fail">Failed Only</option>
+          <option value="pass">Passed Only</option>
+        </select>
+      </div>
+
+      <div style="display: flex; justify-content: flex-end; gap: 10px;">
+        <button type="button" class="btn btn-ghost" onclick="closeCleanUpModal()">Cancel</button>
+        <button type="submit" class="btn btn-danger" style="background: #dc2626; border: none; font-weight: 700;">
+          🗑️ Permanently Delete Records
+        </button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script>
+  function toggleSelectAll(master) {
+    const checkboxes = document.querySelectorAll('.row-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateSelectedCount();
+  }
+
+  function updateSelectedCount() {
+    const selected = document.querySelectorAll('.row-checkbox:checked').length;
+    const btn = document.getElementById('btnDeleteSelected');
+    const counter = document.getElementById('selectedCount');
+    if (counter) counter.textContent = selected;
+    if (btn) {
+      btn.style.display = selected > 0 ? 'inline-flex' : 'none';
+    }
+  }
+
+  function submitBulkDelete() {
+    const selected = document.querySelectorAll('.row-checkbox:checked').length;
+    if (selected === 0) {
+      alert('Please select at least one record to delete.');
+      return;
+    }
+    if (confirm(`Are you sure you want to permanently delete ${selected} selected assessment record(s)?`)) {
+      document.getElementById('bulkDeleteForm').submit();
+    }
+  }
+
+  function confirmDeleteSingle(submissionId, candidateName) {
+    if (confirm(`Are you sure you want to delete the assessment record for ${candidateName}?`)) {
+      const form = document.getElementById('singleDeleteForm');
+      form.action = `/admin/submissions/${submissionId}/delete`;
+      form.submit();
+    }
+  }
+
+  function openCleanUpModal() {
+    document.getElementById('cleanupModal').classList.add('active');
+  }
+
+  function closeCleanUpModal() {
+    document.getElementById('cleanupModal').classList.remove('active');
+  }
+</script>
 {% endblock %}

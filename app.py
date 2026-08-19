@@ -45,13 +45,14 @@ def create_app(config_class=None):
 
     with app.app_context():
         db.create_all()
+        _create_default_admin(app)
 
     # Flask-Login
     login_manager.init_app(app)
     login_manager.login_view = 'admin.login'
     login_manager.login_message = 'Please log in to access this page.'
     login_manager.login_message_category = 'warning'
-    login_manager.session_protection = 'strong'
+    login_manager.session_protection = 'basic'
 
     # ── CSRF: allow JSON API calls with X-CSRFToken header ─────────────────
     app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken']
@@ -68,7 +69,10 @@ def create_app(config_class=None):
     # ── User loader for Flask-Login ─────────────────────────────────────────
     @login_manager.user_loader
     def load_user(user_id):
-        return db.session.get(Admin, int(user_id))
+        try:
+            return db.session.get(Admin, int(user_id))
+        except Exception:
+            return None
 
     # ── Error handlers ─────────────────────────────────────────────────────
     @app.errorhandler(404)
@@ -97,16 +101,12 @@ def create_app(config_class=None):
             return
         _warmed_up['done'] = True
         try:
-            # Pre-establish DB connections and prime caches
-            db.session.execute(db.text('SELECT 1'))
-            db.session.commit()
-            # Prime the active assessments cache
             from routes.candidate import _get_active_assessments
             _get_active_assessments()
         except Exception:
             pass
 
-    # ── Context processors ─────────────────────────────────────────────────
+    # ── Context Processors ─────────────────────────────────────────────────
     @app.context_processor
     def inject_globals():
         return {'app_name': 'ElevateIQ'}
@@ -135,14 +135,16 @@ def create_app(config_class=None):
 
 
 def _create_default_admin(app):
-    """Seed the default admin account."""
+    """Seed or update the default admin account."""
     with app.app_context():
         email = os.environ.get('ADMIN_EMAIL', 'admin@elevateiq.com')
         password = os.environ.get('ADMIN_PASSWORD', 'Admin@2024!')
 
         existing = Admin.query.filter_by(email=email).first()
         if existing:
-            print(f'Admin already exists: {email}')
+            if not existing.check_password(password):
+                existing.set_password(password)
+                db.session.commit()
             return
 
         admin = Admin(email=email)
