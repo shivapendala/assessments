@@ -59,6 +59,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initMonacoEditor();
   }
 
+  // If this assessment is Round 2 (Coding) or has no MCQs, switch to Coding Section immediately
+  if (typeof IS_CODING_ROUND !== 'undefined' && (IS_CODING_ROUND === true || !QUESTIONS || QUESTIONS.length === 0)) {
+    switchMainSection('coding');
+  }
+
   // Check if screensharing is supported
   const isScreenshareSupported = !!(navigator.mediaDevices && navigator.mediaDevices.getDisplayMedia);
   if (!isScreenshareSupported) {
@@ -245,7 +250,9 @@ function switchMainSection(sec) {
   } else {
     if (mcqBody) mcqBody.style.display = 'none';
     if (codingSection) codingSection.style.display = 'grid';
-    if (monacoEditorInstance) monacoEditorInstance.layout();
+    setTimeout(() => {
+      if (monacoEditorInstance) monacoEditorInstance.layout();
+    }, 100);
   }
 }
 

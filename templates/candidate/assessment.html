@@ -2,12 +2,76 @@
 {% block title %}Assessment — {{ assessment.title }}{% endblock %}
 {% block body_class %}assessment-page{% endblock %}
 
-{% block extra_head %}
-<!-- Monaco Editor Loader -->
+{% block extra_css %}
+<!-- Monaco Editor Loader & Code Font -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&display=swap">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap">
+
 <style>
-  /* Section switcher */
+  :root {
+    --exam-bg: #090d16;
+    --exam-header-bg: #0f172a;
+    --exam-border: rgba(255, 255, 255, 0.08);
+    --exam-pane-bg: #0d1117;
+    --exam-editor-bg: #1e1e1e;
+    --primary-blue: #3b82f6;
+    --primary-purple: #8b5cf6;
+    --accent-green: #10b981;
+  }
+
+  body.assessment-page {
+    background: var(--exam-bg) !important;
+    color: #f1f5f9 !important;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    margin: 0;
+    padding: 0;
+    overflow: hidden;
+    height: 100vh;
+    width: 100vw;
+  }
+
+  /* ── Fullscreen Exam Layout ── */
+  .exam-layout {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    width: 100vw;
+    background: var(--exam-bg);
+  }
+
+  /* ── Header Bar ── */
+  .exam-header {
+    height: 60px;
+    background: var(--exam-header-bg);
+    border-bottom: 1px solid var(--exam-border);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 20px;
+    flex-shrink: 0;
+    z-index: 100;
+  }
+  .exam-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .exam-brand img {
+    height: 28px;
+    width: auto;
+    object-fit: contain;
+  }
+  .exam-assessment-title {
+    font-size: 14px;
+    font-weight: 700;
+    color: #fff;
+    max-width: 320px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Section Switcher Tabs */
   .section-switcher-wrap {
     display: flex;
     align-items: center;
@@ -20,34 +84,285 @@
   .sec-nav-btn {
     background: transparent;
     border: none;
-    color: var(--text-muted, #94a3b8);
-    font-size: 13px;
+    color: #94a3b8;
+    font-size: 12.5px;
     font-weight: 700;
     padding: 6px 14px;
     border-radius: 7px;
     cursor: pointer;
     transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 6px;
   }
   .sec-nav-btn:hover { color: #fff; }
   .sec-nav-btn.active {
     background: #1e1b4b;
     color: #a78bfa;
-    border: 1px solid rgba(139, 92, 246, 0.3);
+    border: 1px solid rgba(139, 92, 246, 0.4);
     box-shadow: 0 2px 8px rgba(0,0,0,0.3);
   }
 
-  /* Coding Sandbox Layout */
-  #codingSection {
-    display: none;
-    width: 100%;
-    height: calc(100vh - 65px);
-    grid-template-columns: 42% 58%;
-    background: #0f172a;
+  /* Timer */
+  .timer-wrapper {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: rgba(139, 92, 246, 0.12);
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    padding: 6px 14px;
+    border-radius: 8px;
+    color: #c084fc;
+    font-weight: 800;
+    font-size: 14px;
+    font-family: 'Fira Code', monospace;
+  }
+  .timer-danger {
+    background: rgba(239, 68, 68, 0.15) !important;
+    border-color: rgba(239, 68, 68, 0.4) !important;
+    color: #f87171 !important;
+    animation: pulseTimer 1s infinite;
+  }
+  @keyframes pulseTimer { 0%, 100% { opacity: 1; } 50% { opacity: 0.6; } }
+
+  .exam-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  .exam-candidate {
+    text-align: right;
+  }
+  .ec-name {
+    font-size: 13px;
+    font-weight: 700;
+    color: #fff;
+    display: block;
+  }
+  .ec-ht {
+    font-size: 11px;
+    color: #94a3b8;
+    font-family: monospace;
+  }
+  .vio-indicator {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+    font-size: 11.5px;
+    font-weight: 700;
+    padding: 5px 10px;
+    border-radius: 6px;
+  }
+  .vio-clear {
+    background: rgba(16, 185, 129, 0.12);
+    border-color: rgba(16, 185, 129, 0.3);
+    color: #34d399;
+  }
+
+  /* ── SECTION 1: MCQ BODY LAYOUT ── */
+  #mcqExamBody {
+    display: grid;
+    grid-template-columns: 1fr 300px;
+    height: calc(100vh - 60px);
     overflow: hidden;
   }
+  .question-panel {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    padding: 24px 32px;
+    overflow-y: auto;
+    background: #0b0f19;
+  }
+  .q-progress {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    font-size: 13px;
+    color: #94a3b8;
+    font-weight: 600;
+  }
+  .progress-bar-wrap {
+    flex-grow: 1;
+    max-width: 300px;
+    height: 6px;
+    background: rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    margin-left: 16px;
+  }
+  .progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+    border-radius: 10px;
+    transition: width 0.3s ease;
+  }
+  .q-content {
+    flex-grow: 1;
+  }
+  .q-card-wrapper {
+    background: rgba(17, 24, 39, 0.8);
+    border: 1px solid var(--exam-border);
+    border-radius: 16px;
+    padding: 28px 32px;
+    margin-bottom: 20px;
+    backdrop-filter: blur(10px);
+  }
+  .q-title-text {
+    font-size: 16.5px;
+    font-weight: 700;
+    color: #fff;
+    line-height: 1.6;
+    margin-bottom: 24px;
+  }
+  .options-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  .opt-item {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    background: rgba(255, 255, 255, 0.03);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px 18px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+  }
+  .opt-item:hover {
+    background: rgba(255, 255, 255, 0.06);
+    border-color: rgba(139, 92, 246, 0.3);
+  }
+  .opt-selected {
+    background: rgba(139, 92, 246, 0.15) !important;
+    border-color: #8b5cf6 !important;
+    box-shadow: 0 0 12px rgba(139, 92, 246, 0.25);
+  }
+  .opt-key-circle {
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .opt-selected .opt-key-circle {
+    background: #8b5cf6;
+    color: #fff;
+  }
+  .opt-text {
+    font-size: 14px;
+    color: #cbd5e1;
+    font-weight: 500;
+  }
+
+  .q-nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding-top: 16px;
+    border-top: 1px solid var(--exam-border);
+    margin-top: auto;
+  }
+  .btn-ghost-mcq {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    color: #cbd5e1;
+    padding: 10px 20px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-primary-mcq {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    border: none;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+  .btn-danger-mcq {
+    background: linear-gradient(135deg, #ef4444, #dc2626);
+    border: none;
+    color: #fff;
+    padding: 10px 24px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+  }
+
+  /* Right MCQ Navigator */
+  .navigator-panel {
+    background: #0f172a;
+    border-left: 1px solid var(--exam-border);
+    padding: 20px;
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+  }
+  .nav-panel-header {
+    font-size: 13px;
+    font-weight: 800;
+    color: #fff;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 14px;
+  }
+  .nav-grid {
+    display: grid;
+    grid-template-columns: repeat(5, 1fr);
+    gap: 8px;
+    margin-bottom: 20px;
+  }
+  .nav-btn {
+    background: rgba(255, 255, 255, 0.04);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 8px 0;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+  }
+  .nav-btn:hover { color: #fff; background: rgba(255, 255, 255, 0.1); }
+  .nav-current {
+    border-color: #3b82f6 !important;
+    color: #fff !important;
+    background: rgba(59, 130, 246, 0.25) !important;
+  }
+  .nav-answered {
+    background: rgba(16, 185, 129, 0.2) !important;
+    border-color: rgba(16, 185, 129, 0.5) !important;
+    color: #34d399 !important;
+  }
+
+  /* ── SECTION 2: LIVE CODING SANDBOX (SPLIT IDE) ── */
+  #codingSection {
+    display: grid;
+    grid-template-columns: 42% 58%;
+    height: calc(100vh - 60px);
+    width: 100vw;
+    background: #090d16;
+    overflow: hidden;
+  }
+
+  /* Left Pane: Problem Details */
   .code-left-pane {
-    border-right: 1px solid rgba(255, 255, 255, 0.1);
-    background: rgba(15, 23, 42, 0.95);
+    background: #0b0f19;
+    border-right: 1px solid var(--exam-border);
     display: flex;
     flex-direction: column;
     height: 100%;
@@ -55,35 +370,39 @@
   }
   .prob-header {
     padding: 16px 20px;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    border-bottom: 1px solid var(--exam-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
+    background: #0f172a;
+    flex-shrink: 0;
   }
   .prob-tabs-bar {
     display: flex;
     gap: 6px;
-    padding: 10px 20px;
-    background: rgba(0, 0, 0, 0.25);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    padding: 8px 16px;
+    background: rgba(0, 0, 0, 0.35);
+    border-bottom: 1px solid var(--exam-border);
+    flex-shrink: 0;
   }
   .prob-tab-btn {
-    background: none;
-    border: none;
+    background: transparent;
+    border: 1px solid transparent;
     color: #94a3b8;
     font-size: 12px;
     font-weight: 700;
     padding: 6px 12px;
     border-radius: 6px;
     cursor: pointer;
+    transition: all 0.2s;
   }
   .prob-tab-btn.active {
     background: rgba(139, 92, 246, 0.2);
-    color: #a78bfa;
-    border: 1px solid rgba(139, 92, 246, 0.4);
+    color: #c084fc;
+    border-color: rgba(139, 92, 246, 0.4);
   }
   .prob-body-content {
-    padding: 20px;
+    padding: 24px 20px 40px;
     line-height: 1.7;
     color: #cbd5e1;
     font-size: 13.5px;
@@ -95,29 +414,30 @@
     color: #a78bfa;
     text-transform: uppercase;
     letter-spacing: 0.5px;
-    margin: 16px 0 6px;
+    margin: 20px 0 8px;
   }
   .code-snippet-box {
-    background: rgba(0, 0, 0, 0.45);
+    background: #030712;
     border: 1px solid rgba(255, 255, 255, 0.1);
     border-radius: 8px;
     padding: 10px 14px;
     font-family: 'Fira Code', monospace;
     font-size: 12.5px;
     color: #f1f5f9;
-    margin: 8px 0;
+    margin: 8px 0 14px;
     white-space: pre-wrap;
   }
 
-  /* Right Editor Pane */
+  /* Right Pane: Monaco IDE */
   .code-right-pane {
     display: flex;
     flex-direction: column;
     height: 100%;
     background: #1e1e1e;
+    overflow: hidden;
   }
   .editor-top-tools {
-    height: 42px;
+    height: 44px;
     background: #181818;
     border-bottom: 1px solid #2d2d2d;
     display: flex;
@@ -130,22 +450,22 @@
     background: #252526;
     color: #fff;
     border: 1px solid #3c3c3c;
-    padding: 4px 10px;
+    padding: 5px 12px;
     border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
     outline: none;
+    cursor: pointer;
   }
   #monacoEditorBox {
     flex-grow: 1;
     width: 100%;
-    height: 100%;
-    min-height: 180px;
+    min-height: 260px;
   }
 
   /* Console Drawer */
   .code-console-drawer {
-    height: 210px;
+    height: 230px;
     background: #141414;
     border-top: 1px solid #2d2d2d;
     display: flex;
@@ -153,13 +473,14 @@
     flex-shrink: 0;
   }
   .console-bar-header {
-    height: 36px;
+    height: 38px;
     background: #1a1a1a;
     border-bottom: 1px solid #2d2d2d;
     display: flex;
     align-items: center;
     justify-content: space-between;
     padding: 0 16px;
+    flex-shrink: 0;
   }
   .con-tabs-list { display: flex; gap: 4px; }
   .con-tab-btn {
@@ -179,9 +500,10 @@
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    padding: 5px 14px;
+    padding: 6px 14px;
     border-radius: 6px;
     cursor: pointer;
+    transition: all 0.2s;
   }
   .btn-run-sample:hover { background: #3a3a3a; }
   .btn-submit-code-prob {
@@ -190,14 +512,15 @@
     color: #fff;
     font-size: 12px;
     font-weight: 700;
-    padding: 5px 16px;
+    padding: 6px 16px;
     border-radius: 6px;
     cursor: pointer;
+    transition: all 0.2s;
   }
   .btn-submit-code-prob:hover { opacity: .9; }
   .console-content-box {
     flex-grow: 1;
-    padding: 10px 16px;
+    padding: 12px 16px;
     overflow-y: auto;
     font-family: 'Fira Code', monospace;
     font-size: 12px;
@@ -207,73 +530,67 @@
     background: #1e1e1e;
     border: 1px solid #333;
     border-radius: 6px;
-    padding: 8px 12px;
-    margin-bottom: 6px;
+    padding: 10px 14px;
+    margin-bottom: 8px;
   }
   .tc-passed-border { border-left: 3px solid #10b981; }
   .tc-failed-border { border-left: 3px solid #ef4444; }
+
+  /* Overlays */
+  .violation-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.85);
+    backdrop-filter: blur(12px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .violation-card {
+    background: #0f172a;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    border-radius: 18px;
+    padding: 36px;
+    max-width: 460px;
+    text-align: center;
+    color: #fff;
+    box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+  }
 </style>
 {% endblock %}
 
 {% block body %}
 <!-- Screenshare Proctoring Setup Overlay -->
 <div class="violation-overlay" id="screenshareOverlay" style="display: flex;">
-  <div class="violation-card glass-card">
-    <div class="vio-icon">🖥️</div>
-    <h2 class="vio-title" style="color: var(--violet);">Proctoring Setup Required</h2>
-    <p class="vio-msg">This assessment is monitored. You must share your <strong>Entire Screen</strong> before you can view questions or live coding challenges.</p>
-    <button class="btn btn-primary btn-lg btn-full" id="startScreenshareBtn" onclick="requestScreenshare()">Enable Screenshare &amp; Start Test</button>
+  <div class="violation-card">
+    <div style="font-size: 40px; margin-bottom: 12px;">🖥️</div>
+    <h2 style="font-size: 20px; font-weight: 800; color: #a78bfa; margin-bottom: 8px;">Proctoring Setup Required</h2>
+    <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.6; margin-bottom: 24px;">
+      This assessment is monitored. You must share your <strong>Entire Screen</strong> before you can access the exam questions or live coding sandbox.
+    </p>
+    <button class="btn-primary-mcq" id="startScreenshareBtn" onclick="requestScreenshare()" style="width: 100%; padding: 12px; font-size: 14px;">
+      Enable Screenshare &amp; Start Test
+    </button>
   </div>
 </div>
 
 <!-- Violation Warning Overlay -->
 <div class="violation-overlay" id="violationOverlay" style="display:none">
-  <div class="violation-card glass-card">
-    <div class="vio-icon">⚠️</div>
-    <h2 class="vio-title" id="vioTitle">Tab Switch Detected!</h2>
-    <p class="vio-msg" id="vioMsg">Please stay on this tab. Switching tabs is a violation.</p>
-    <div class="vio-counter">Violation <span id="vioCount">1</span> of 3</div>
-    <button class="btn btn-primary" onclick="dismissViolation()">I Understand — Continue</button>
+  <div class="violation-card">
+    <div style="font-size: 40px; margin-bottom: 12px;">⚠️</div>
+    <h2 style="font-size: 20px; font-weight: 800; color: #f87171; margin-bottom: 8px;" id="vioTitle">Tab Switch Detected!</h2>
+    <p style="font-size: 13.5px; color: #94a3b8; line-height: 1.6; margin-bottom: 20px;" id="vioMsg">Please stay on this window. Switching tabs or exiting fullscreen is a monitored violation.</p>
+    <div style="font-size: 13px; font-weight: 700; color: #fbbf24; margin-bottom: 20px;">Violation <span id="vioCount">1</span> of 3</div>
+    <button class="btn-primary-mcq" onclick="dismissViolation()" style="width: 100%; padding: 12px;">I Understand — Continue</button>
   </div>
 </div>
 
-<!-- Auto-submit / Submitting overlay -->
-<div id="submittingOverlay" style="
-  display: none;
-  position: fixed; inset: 0;
-  background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #0f172a 100%);
-  z-index: 99999;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 28px;
-  font-family: var(--font);
-">
-  <div style="display: flex; align-items: center; justify-content: center; max-width: 280px; height: 60px;">
-    <span style="font-size: 24px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em;">ElevateIQ</span>
-  </div>
-  <div style="position:relative;width:72px;height:72px;">
-    <svg viewBox="0 0 72 72" style="width:72px;height:72px;animation:spinRing 1.4s linear infinite;">
-      <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(139,92,246,0.15)" stroke-width="6"/>
-      <circle cx="36" cy="36" r="30" fill="none" stroke="#8b5cf6" stroke-width="6"
-              stroke-linecap="round" stroke-dasharray="120 188"
-              style="transform-origin:center;animation:spinArc 1.4s ease-in-out infinite;"/>
-    </svg>
-  </div>
-  <div style="text-align:center;">
-    <h2 id="submittingTitle" style="font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-0.02em;margin-bottom:8px;">
-      Submitting Your Assessment…
-    </h2>
-    <p id="submittingMsg" style="font-size:14px;color:#94a3b8;line-height:1.6;max-width:320px;margin:0 auto;">
-      Please wait. Do not close this tab.
-    </p>
-  </div>
+<!-- Auto-submit Overlay -->
+<div id="submittingOverlay" style="display: none; position: fixed; inset: 0; background: #090d16; z-index: 99999; flex-direction: column; align-items: center; justify-content: center; gap: 20px;">
+  <div style="font-size: 24px; font-weight: 800; color: #fff;">ElevateIQ</div>
+  <div style="font-size: 14px; color: #94a3b8;" id="submittingMsg">Submitting your assessment, please wait...</div>
 </div>
-
-<style>
-@keyframes spinRing { to { transform: rotate(360deg); } }
-@keyframes spinArc  { 0%,100%{stroke-dashoffset:0} 50%{stroke-dashoffset:100} }
-</style>
 
 <!-- Assessment Layout -->
 <div class="exam-layout">
@@ -281,24 +598,28 @@
   <!-- Top Bar -->
   <header class="exam-header">
     <div class="exam-brand">
-      <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" style="height: 32px; width: auto; object-fit: contain;" />
+      <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" />
       <span class="exam-assessment-title">{{ assessment.title }}</span>
     </div>
 
-    <!-- Section Switcher Tabs -->
+    <!-- Section Switcher Tabs (Only if both MCQs and Coding exist) -->
     <div class="section-switcher-wrap">
-      <button class="sec-nav-btn active" id="btnSecMcq" onclick="switchMainSection('mcq')">
+      {% if questions|length > 0 %}
+      <button class="sec-nav-btn {% if not is_coding_round %}active{% endif %}" id="btnSecMcq" onclick="switchMainSection('mcq')">
         📝 Section 1: MCQs ({{ questions|length }})
       </button>
-      <button class="sec-nav-btn" id="btnSecCoding" onclick="switchMainSection('coding')">
+      {% endif %}
+      {% if coding_problems|length > 0 %}
+      <button class="sec-nav-btn {% if is_coding_round or questions|length == 0 %}active{% endif %}" id="btnSecCoding" onclick="switchMainSection('coding')">
         💻 Section 2: Live Coding ({{ coding_problems|length }})
       </button>
+      {% endif %}
     </div>
 
     <!-- Timer -->
     <div class="timer-wrapper" id="timerWrapper">
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-      <span class="timer-display" id="timerDisplay">{{ '%02d'|format(assessment.duration) }}:00</span>
+      <span id="timerDisplay">{{ '%02d'|format(assessment.duration) }}:00</span>
     </div>
 
     <div class="exam-right">
@@ -309,99 +630,61 @@
       <div class="vio-indicator {% if submission.violations == 0 %}vio-clear{% endif %}" id="vioIndicator">
         ⚠ <span id="vioHeader">{{ submission.violations }}</span>/3 violations
       </div>
+      <button onclick="confirmSubmit()" style="background: rgba(239, 68, 68, 0.15); border: 1px solid rgba(239, 68, 68, 0.3); color: #f87171; font-weight: 700; font-size: 12px; padding: 6px 14px; border-radius: 6px; cursor: pointer;">
+        Submit Test
+      </button>
     </div>
   </header>
 
   <!-- ── SECTION 1: MCQ BODY ── -->
-  <div class="exam-body" id="mcqExamBody">
-    <!-- Question Panel -->
+  <div class="exam-body" id="mcqExamBody" style="{% if is_coding_round or questions|length == 0 %}display: none;{% else %}display: grid;{% endif %}">
     <section class="question-panel" id="questionPanel">
       <div class="q-progress">
-        <span id="qProgressText">Question <span id="currentQNum">1</span> of {{ questions|length }}</span>
-        <div class="progress-bar">
-          <div class="progress-fill" id="progressFill" style="width: {{ (1/questions|length*100)|round(1) }}%"></div>
+        <span>Question <strong id="currentQNum" style="color: #fff;">1</strong> of {{ questions|length }}</span>
+        <div class="progress-bar-wrap">
+          <div class="progress-fill" id="progressFill" style="width: {{ (1/questions|length*100)|round(1) if questions|length > 0 else 0 }}%"></div>
         </div>
       </div>
 
       <div class="q-content" id="questionContent">
-        <div class="q-loading">Loading question…</div>
+        <div style="color: #94a3b8; text-align: center; padding: 40px;">Loading question…</div>
       </div>
 
       <!-- Navigation Bottom Bar -->
       <div class="q-nav-bar">
-        <button class="btn btn-ghost" id="prevBtn" onclick="navigateTo(currentQuestion - 1)" disabled>
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"/></svg>
-          Previous
+        <button class="btn-ghost-mcq" id="prevBtn" onclick="navigateTo(currentQuestion - 1)" disabled>
+          ← Previous
         </button>
-
-        <button class="btn btn-danger" id="submitBtn" onclick="confirmSubmit()">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="20 6 9 17 4 12"/></svg>
-          Submit Assessment
-        </button>
-
-        <button class="btn btn-primary" id="nextBtn" onclick="navigateTo(currentQuestion + 1)">
-          Next
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"/></svg>
+        <button class="btn-primary-mcq" id="nextBtn" onclick="navigateTo(currentQuestion + 1)">
+          Next →
         </button>
       </div>
     </section>
 
-    <!-- Navigator Panel -->
+    <!-- Right Navigator Panel -->
     <aside class="navigator-panel">
       <div class="nav-panel-header">Question Navigator</div>
-
-      <div class="nav-legend">
-        <span class="legend-item"><span class="legend-dot dot-answered"></span>Answered</span>
-        <span class="legend-item"><span class="legend-dot dot-current"></span>Current</span>
-        <span class="legend-item"><span class="legend-dot dot-unanswered"></span>Not Answered</span>
-      </div>
-
       <div class="nav-grid" id="navGrid">
         {% for q in questions %}
-        <button
-          class="nav-btn {% if loop.index == 1 %}nav-current{% endif %}"
-          id="nav-{{ loop.index0 }}"
-          onclick="navigateTo({{ loop.index0 }})"
-          data-index="{{ loop.index0 }}"
-        >{{ loop.index }}</button>
+        <button class="nav-btn {% if loop.index == 1 %}nav-current{% endif %}" id="nav-{{ loop.index0 }}" onclick="navigateTo({{ loop.index0 }})">
+          {{ loop.index }}
+        </button>
         {% endfor %}
       </div>
 
-      <div class="nav-summary">
-        <div class="ns-item">
-          <span class="ns-num" id="answeredCount">0</span>
-          <span class="ns-label">Answered</span>
-        </div>
-        <div class="ns-item">
-          <span class="ns-num" id="unansweredCount">{{ questions|length }}</span>
-          <span class="ns-label">Not Answered</span>
-        </div>
-      </div>
-
-      <!-- Integrated Proctor Cam -->
-      <div class="proctor-cam-card glass-card" id="proctorCamContainer" style="position: relative; width: 100%; height: 130px; bottom: auto; right: auto; z-index: auto; margin-top: var(--space-4);">
-        <div class="pcc-header">
-          <span class="pcc-dot"></span>
-          <span class="pcc-status">REC ● LIVE</span>
-        </div>
-        <video id="proctorVideo" autoplay playsinline muted></video>
-        <div class="pcc-fallback" id="proctorVideoFallback" style="display: none; flex-direction: column; gap: 8px; justify-content: center; align-items: center; height: calc(100% - 20px);">
-          <div class="pcc-lens">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="color: var(--danger);"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            <div class="pcc-scanner-line"></div>
-          </div>
-          <span style="font-size: 8px; font-weight: 800; color: var(--danger); letter-spacing: 0.05em; text-transform: uppercase;">SECURE FEED ACTIVE</span>
-        </div>
+      <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid var(--exam-border);">
+        <div style="font-size: 11px; font-weight: 700; color: #34d399; margin-bottom: 6px;">● PROCTORING FEED ACTIVE</div>
+        <video id="proctorVideo" autoplay playsinline muted style="width: 100%; height: 110px; border-radius: 8px; background: #000; object-fit: cover; border: 1px solid rgba(255,255,255,0.1);"></video>
       </div>
     </aside>
   </div>
 
   <!-- ── SECTION 2: LIVE CODING SANDBOX (SPLIT IDE) ── -->
-  <div id="codingSection">
+  <div id="codingSection" style="{% if is_coding_round or questions|length == 0 %}display: grid;{% else %}display: none;{% endif %}">
     <!-- Left Pane: Problem Description -->
     <div class="code-left-pane">
       <div class="prob-header">
-        <div style="font-weight: 800; font-size: 16px; color: #fff;" id="probTitleText">Coding Challenge</div>
+        <div style="font-weight: 800; font-size: 15px; color: #fff;" id="probTitleText">Coding Challenge</div>
         <div style="font-size: 11px; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 3px 8px; border-radius: 4px;" id="probDiffBadge">Easy</div>
       </div>
       <div class="prob-tabs-bar" id="codingProblemTabs"></div>
@@ -413,14 +696,19 @@
     <!-- Right Pane: Monaco IDE -->
     <div class="code-right-pane">
       <div class="editor-top-tools">
-        <select class="code-lang-select" id="codeLangSelect" onchange="onCodeLangChange()">
-          <option value="python">Python 3.11</option>
-          <option value="javascript">JavaScript (Node.js)</option>
-          <option value="java">Java 17</option>
-          <option value="cpp">C++ 17</option>
-        </select>
-        <div style="display: flex; gap: 8px;">
-          <button style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;" onclick="resetCodingTemplate()">↺ Reset Code</button>
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <select class="code-lang-select" id="codeLangSelect" onchange="onCodeLangChange()">
+            <option value="python">Python 3.11</option>
+            <option value="javascript">JavaScript (Node.js)</option>
+            <option value="java">Java 17</option>
+            <option value="cpp">C++ 17</option>
+          </select>
+          <button style="background:none;border:none;color:#94a3b8;font-size:11.5px;cursor:pointer;font-weight:600;" onclick="resetCodingTemplate()">
+            ↺ Reset Code
+          </button>
+        </div>
+        <div style="display: flex; align-items: center; gap: 8px;">
+          <span style="font-size: 11px; font-weight: 700; color: #34d399;">● Monaco IDE Active</span>
         </div>
       </div>
 
@@ -432,15 +720,14 @@
           <div class="con-tabs-list">
             <button class="con-tab-btn active" id="conTabSample" onclick="switchConsoleTab('sample')">Sample Testcases</button>
             <button class="con-tab-btn" id="conTabCustom" onclick="switchConsoleTab('custom')">Custom Input</button>
-            <button class="con-tab-btn" id="conTabSubmission" onclick="switchConsoleTab('submission')">Submission Results</button>
           </div>
           <div style="display: flex; gap: 8px;">
             <button class="btn-run-sample" onclick="executeSampleCode()" id="btnRunSample">▶ Run Sample Cases</button>
-            <button class="btn-submit-code-prob" onclick="submitProblemSolution()" id="btnSubmitCodeProb">⚡ Submit Code</button>
+            <button class="btn-submit-code-prob" onclick="submitProblemSolution()" id="btnSubmitCodeProb">⚡ Submit Solution</button>
           </div>
         </div>
         <div class="console-content-box" id="consoleOutputBox">
-          <div style="color: #64748b; padding: 6px;">Click <strong>▶ Run Sample Cases</strong> to test against example inputs, or <strong>⚡ Submit Code</strong> to run the full hidden test suite.</div>
+          <div style="color: #64748b; padding: 6px;">Click <strong>▶ Run Sample Cases</strong> to verify against example inputs, or <strong>⚡ Submit Solution</strong> to evaluate all hidden testcases.</div>
         </div>
       </div>
     </div>
@@ -453,11 +740,12 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 </form>
 
-<!-- Data Injected for JS -->
+<!-- Injected Configuration for JS -->
 <script>
   const QUESTIONS = {{ questions_data | tojson }};
   const SAVED_ANSWERS = {{ saved_answers | tojson }};
   const CODING_PROBLEMS = {{ coding_problems | tojson }};
+  const IS_CODING_ROUND = {{ is_coding_round | tojson }};
   const TOTAL_DURATION_SECONDS = {{ assessment.duration * 60 }};
   const SUBMISSION_ID = {{ submission.id }};
   const INITIAL_VIOLATIONS = {{ submission.violations }};

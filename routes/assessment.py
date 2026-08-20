@@ -164,6 +164,8 @@ def engine():
         p_dict['saved_submission'] = saved_sub.to_dict() if saved_sub else None
         coding_problems_data.append(p_dict)
 
+    is_coding_round = (assessment_id == 4 or 'Coding' in (assessment.title or '') or 'Round 2' in (assessment.title or '') or len(shuffled_questions) == 0)
+
     return render_template(
         'candidate/assessment.html',
         assessment=assessment,
@@ -171,6 +173,7 @@ def engine():
         questions_data=questions_data,
         saved_answers=saved_answers,
         coding_problems=coding_problems_data,
+        is_coding_round=is_coding_round,
         submission=submission,
         candidate=candidate,
     )
