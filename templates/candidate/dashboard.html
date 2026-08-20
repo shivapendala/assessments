@@ -1,291 +1,640 @@
 {% extends "base.html" %}
-{% block title %}Candidate Dashboard — ElevateIQ{% endblock %}
-{% block body_class %}auth-page{% endblock %}
+{% block title %}Candidate Dashboard — ElevateIQ Campus Assessment{% endblock %}
+{% block body_class %}dashboard-page{% endblock %}
 
-{% block body %}
+{% block extra_css %}
 <style>
-  .dash-container {
-    max-width: 960px;
+  :root {
+    --bg-dark: #090d16;
+    --card-bg: rgba(17, 24, 39, 0.75);
+    --card-border: rgba(255, 255, 255, 0.08);
+    --card-hover-border: rgba(99, 102, 241, 0.35);
+    --primary-blue: #3b82f6;
+    --primary-purple: #8b5cf6;
+    --text-main: #f8fafc;
+    --text-sub: #94a3b8;
+    --text-faint: #64748b;
+  }
+
+  body {
+    background-color: var(--bg-dark) !important;
+    background-image: 
+      radial-gradient(at 0% 0%, rgba(59, 130, 246, 0.12) 0px, transparent 50%),
+      radial-gradient(at 100% 0%, rgba(139, 92, 246, 0.12) 0px, transparent 50%),
+      radial-gradient(at 50% 100%, rgba(15, 23, 42, 0.8) 0px, transparent 50%) !important;
+    min-height: 100vh;
+    color: var(--text-main);
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  }
+
+  .dash-wrapper {
+    max-width: 1140px;
     margin: 0 auto;
-    padding: 40px 20px;
+    padding: 32px 20px 60px;
   }
-  .dash-profile-card {
-    background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 27, 75, 0.9) 50%, rgba(49, 46, 129, 0.9) 100%);
-    border: 1px solid rgba(255, 255, 255, 0.15) !important;
-    border-radius: 20px;
-    padding: 36px;
-    color: #ffffff;
-    box-shadow: 0 20px 40px -10px rgba(15, 23, 42, 0.5);
-    margin-bottom: 36px;
-    backdrop-filter: blur(12px);
+
+  /* Top Navbar */
+  .dash-navbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 14px 24px;
+    background: rgba(15, 23, 42, 0.65);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(16px);
+    margin-bottom: 28px;
   }
-  .dash-badge {
-    background: rgba(124, 58, 237, 0.25);
-    color: #a78bfa;
-    border: 1px solid rgba(124, 58, 237, 0.4);
+  .dash-brand {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .dash-brand img {
+    height: 32px;
+    width: auto;
+    object-fit: contain;
+  }
+  .brand-subtext {
     font-size: 11px;
     font-weight: 700;
-    letter-spacing: 1px;
+    color: var(--primary-purple);
+    background: rgba(139, 92, 246, 0.15);
+    padding: 2px 8px;
+    border-radius: 6px;
     text-transform: uppercase;
-    padding: 6px 14px;
-    border-radius: 50px;
-    display: inline-block;
-    margin-bottom: 12px;
+    letter-spacing: 0.5px;
   }
-  .hall-ticket-box {
-    background: rgba(0, 0, 0, 0.4);
-    color: #fbbf24;
-    font-family: monospace;
+  .user-pill-menu {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .user-avatar {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary-blue), var(--primary-purple));
+    color: #fff;
+    font-weight: 700;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .btn-signout {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 7px 16px;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+  }
+  .btn-signout:hover {
+    background: rgba(239, 68, 68, 0.15);
+    border-color: rgba(239, 68, 68, 0.3);
+    color: #f87171;
+  }
+
+  /* Hero Card */
+  .dash-hero-card {
+    background: linear-gradient(135deg, rgba(30, 41, 59, 0.8) 0%, rgba(15, 23, 42, 0.9) 100%);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 28px 32px;
+    box-shadow: 0 10px 30px -5px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(12px);
+    margin-bottom: 32px;
+  }
+  .hero-welcome-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(59, 130, 246, 0.12);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    font-size: 12px;
     font-weight: 700;
     padding: 4px 12px;
-    border-radius: 8px;
-    border: 1px solid rgba(251, 191, 36, 0.3);
-  }
-  .stage-card {
-    background: rgba(15, 23, 42, 0.8);
-    border: 1px solid rgba(255, 255, 255, 0.1) !important;
     border-radius: 20px;
-    padding: 32px;
-    color: #ffffff;
-    height: 100%;
+    margin-bottom: 12px;
+  }
+  .hero-title {
+    font-size: 26px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 8px;
+    letter-spacing: -0.02em;
+  }
+  .hero-subtitle {
+    font-size: 14px;
+    color: var(--text-sub);
+    margin: 0 0 20px;
+  }
+  .hero-meta-bar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 16px;
+    padding-top: 16px;
+    border-top: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .meta-pill-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    color: #cbd5e1;
+  }
+  .meta-pill-item strong {
+    color: #fff;
+  }
+  .ht-badge {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fbbf24;
+    font-family: 'Fira Code', monospace;
+    font-weight: 700;
+    padding: 3px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+  }
+
+  /* Recruitment Pipeline Stepper */
+  .pipeline-header-wrap {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+  }
+  .pipeline-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 4px;
+    letter-spacing: -0.01em;
+  }
+  .pipeline-sub {
+    font-size: 13px;
+    color: var(--text-sub);
+    margin: 0;
+  }
+
+  /* Round Cards Grid */
+  .rounds-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(340px, 1fr));
+    gap: 24px;
+    margin-bottom: 40px;
+  }
+
+  .round-card {
+    background: var(--card-bg);
+    border: 1px solid var(--card-border);
+    border-radius: 20px;
+    padding: 28px;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
     backdrop-filter: blur(12px);
-    transition: all 0.3s ease;
+    transition: all 0.25s ease;
+    position: relative;
+    overflow: hidden;
   }
-  .stage-card:hover {
-    transform: translateY(-4px);
-    box-shadow: 0 15px 30px rgba(0, 0, 0, 0.3);
+  .round-card::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    height: 4px;
   }
-  .stage-card-active-blue {
-    border: 2px solid #2563eb !important;
-    background: linear-gradient(135deg, rgba(37, 99, 235, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%);
-    box-shadow: 0 0 30px rgba(37, 99, 235, 0.25);
+  .round-card-r1::before {
+    background: linear-gradient(90deg, #3b82f6, #60a5fa);
   }
-  .stage-card-active-purple {
-    border: 2px solid #7c3aed !important;
-    background: linear-gradient(135deg, rgba(124, 58, 237, 0.15) 0%, rgba(15, 23, 42, 0.85) 100%);
-    box-shadow: 0 0 30px rgba(124, 58, 237, 0.3);
+  .round-card-r2::before {
+    background: linear-gradient(90deg, #8b5cf6, #c084fc);
   }
-  .meta-tag {
-    background: rgba(255, 255, 255, 0.08);
+  .round-card:hover {
+    border-color: var(--card-hover-border);
+    transform: translateY(-3px);
+    box-shadow: 0 16px 32px -8px rgba(0, 0, 0, 0.4);
+  }
+
+  .round-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+  .round-step-tag {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 6px;
+  }
+  .tag-r1 {
+    background: rgba(59, 130, 246, 0.15);
+    color: #60a5fa;
+    border: 1px solid rgba(59, 130, 246, 0.3);
+  }
+  .tag-r2 {
+    background: rgba(139, 92, 246, 0.15);
+    color: #c084fc;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+  }
+
+  .round-status-pill {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 20px;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+  }
+  .status-ready {
+    background: rgba(16, 185, 129, 0.12);
+    color: #34d399;
+    border: 1px solid rgba(16, 185, 129, 0.3);
+  }
+  .status-inprog {
+    background: rgba(245, 158, 11, 0.15);
+    color: #fbbf24;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+  .status-passed {
+    background: rgba(16, 185, 129, 0.2);
+    color: #10b981;
+    border: 1px solid rgba(16, 185, 129, 0.4);
+  }
+  .status-failed {
+    background: rgba(239, 68, 68, 0.15);
+    color: #f87171;
+    border: 1px solid rgba(239, 68, 68, 0.3);
+  }
+
+  .round-card-title {
+    font-size: 20px;
+    font-weight: 800;
+    color: #fff;
+    margin: 0 0 8px;
+    letter-spacing: -0.01em;
+  }
+  .round-card-desc {
+    font-size: 13.5px;
+    color: var(--text-sub);
+    line-height: 1.6;
+    margin: 0 0 20px;
+  }
+
+  .spec-chips-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin-bottom: 24px;
+  }
+  .spec-chip {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     color: #cbd5e1;
     font-size: 12px;
     font-weight: 600;
-    padding: 6px 12px;
+    padding: 5px 10px;
     border-radius: 8px;
-    margin-right: 6px;
+  }
+
+  /* Form & Inputs */
+  .track-select-box {
+    background: #111827;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    color: #f8fafc;
+    border-radius: 10px;
+    padding: 10px 14px;
+    font-size: 13px;
+    font-weight: 600;
+    width: 100%;
+    margin-bottom: 18px;
+    outline: none;
+    cursor: pointer;
+  }
+  .track-select-box:focus {
+    border-color: var(--primary-blue);
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+  }
+
+  /* Buttons */
+  .btn-launch-r1 {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8);
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px 20px;
+    border-radius: 10px;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .btn-launch-r1:hover {
+    background: linear-gradient(135deg, #3b82f6, #2563eb);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(37, 99, 235, 0.5);
+  }
+
+  .btn-launch-r2 {
+    background: linear-gradient(135deg, #7c3aed, #6d28d9);
+    color: #fff !important;
+    font-size: 14px;
+    font-weight: 700;
+    padding: 13px 20px;
+    border-radius: 10px;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+    box-shadow: 0 4px 14px rgba(124, 58, 237, 0.35);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    text-decoration: none;
+  }
+  .btn-launch-r2:hover {
+    background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+    transform: translateY(-1px);
+    box-shadow: 0 6px 20px rgba(124, 58, 237, 0.5);
+  }
+
+  /* Scorecard Widget */
+  .scorecard-mini {
+    background: rgba(0, 0, 0, 0.25);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 14px 16px;
+    margin-bottom: 16px;
+  }
+  .sc-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
     margin-bottom: 6px;
-    display: inline-block;
   }
-  .btn-start-round1 {
-    background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
-    color: #ffffff !important;
-    font-weight: 800;
-    font-size: 16px;
-    padding: 16px;
-    border-radius: 12px;
-    border: none;
+  .sc-row:last-child { margin-bottom: 0; }
+  .sc-label { font-size: 12.5px; color: var(--text-sub); }
+  .sc-val { font-size: 13px; font-weight: 700; color: #fff; }
+
+  .btn-view-score {
+    background: rgba(255, 255, 255, 0.06);
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    color: #cbd5e1;
+    font-size: 13px;
+    font-weight: 600;
+    padding: 10px 16px;
+    border-radius: 8px;
     width: 100%;
-    box-shadow: 0 8px 20px rgba(37, 99, 235, 0.4);
-    transition: all 0.25s ease;
-    cursor: pointer;
+    text-align: center;
+    display: block;
+    text-decoration: none;
+    transition: all 0.2s;
   }
-  .btn-start-round1:hover {
-    background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(37, 99, 235, 0.6);
-  }
-  .btn-start-round2 {
-    background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);
-    color: #ffffff !important;
-    font-weight: 800;
-    font-size: 16px;
-    padding: 16px;
-    border-radius: 12px;
-    border: none;
-    width: 100%;
-    box-shadow: 0 8px 20px rgba(124, 58, 237, 0.4);
-    transition: all 0.25s ease;
-    cursor: pointer;
-  }
-  .btn-start-round2:hover {
-    background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
-    transform: translateY(-2px);
-    box-shadow: 0 12px 25px rgba(124, 58, 237, 0.6);
-  }
-  .result-score-box {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid rgba(255, 255, 255, 0.1);
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 20px;
+  .btn-view-score:hover {
+    background: rgba(255, 255, 255, 0.1);
+    color: #fff;
   }
 </style>
+{% endblock %}
 
-<div class="auth-bg">
-  <div class="auth-orb orb-1"></div>
-  <div class="auth-orb orb-2"></div>
-  <div class="auth-orb orb-3"></div>
+{% block body %}
+<div class="dash-wrapper">
 
-  <div class="dash-container">
+  <!-- Top Navbar -->
+  <header class="dash-navbar">
+    <div class="dash-brand">
+      <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" />
+      <span class="brand-subtext">Campus Drive Portal</span>
+    </div>
 
-    <!-- Profile Header Card -->
-    <div class="dash-profile-card">
-      <div class="d-flex justify-content-between align-items-center flex-wrap gap-3">
-        <div>
-          <span class="dash-badge">Candidate Dashboard</span>
-          <h2 class="fw-bold mb-2 text-white" style="font-size: 30px;">Welcome, {{ candidate.full_name }}</h2>
-          <p class="mb-0" style="color: #94a3b8; font-size: 15px;">
-            Hall Ticket: <span class="hall-ticket-box">{{ candidate.hall_ticket }}</span> &nbsp;&bull;&nbsp; {{ candidate.email }}
-          </p>
+    <div class="user-pill-menu">
+      <div class="user-avatar">{{ candidate.full_name[0]|upper }}</div>
+      <div class="d-none d-sm-block">
+        <div style="font-size: 13px; font-weight: 700; color: #fff;">{{ candidate.full_name }}</div>
+        <div style="font-size: 11px; color: var(--text-sub);">{{ candidate.email }}</div>
+      </div>
+      <form method="POST" action="{{ url_for('candidate.logout') }}" style="margin: 0;">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+        <button type="submit" class="btn-signout">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Log Out
+        </button>
+      </form>
+    </div>
+  </header>
+
+  <!-- Hero Profile Banner -->
+  <div class="dash-hero-card">
+    <div class="hero-welcome-badge">
+      <span>●</span> Candidate Assessment Dashboard
+    </div>
+    <h1 class="hero-title">Welcome, {{ candidate.full_name }}</h1>
+    <p class="hero-subtitle">ElevateIQ Campus Recruitment &amp; Technical Evaluation Center</p>
+
+    <div class="hero-meta-bar">
+      <div class="meta-pill-item">
+        <span>Hall Ticket:</span>
+        <span class="ht-badge">{{ candidate.hall_ticket }}</span>
+      </div>
+      <div class="meta-pill-item">
+        <span>Registered Email:</span>
+        <strong>{{ candidate.email }}</strong>
+      </div>
+      <div class="meta-pill-item">
+        <span>Proctoring Mode:</span>
+        <span style="color: #34d399; font-weight: 600;">Full-Screen Live Monitored</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Recruitment Stages Header -->
+  <div class="pipeline-header-wrap">
+    <div>
+      <h2 class="pipeline-title">Assessment Recruitment Stages</h2>
+      <p class="pipeline-sub">Complete both recruitment rounds to qualify for the interview shortlist</p>
+    </div>
+  </div>
+
+  <!-- Dual Rounds Grid -->
+  <div class="rounds-grid">
+
+    <!-- ── ROUND 1: ONLINE ASSESSMENT (MCQs) ── -->
+    <div class="round-card round-card-r1">
+      <div>
+        <div class="round-header">
+          <span class="round-step-tag tag-r1">Round 1 — Foundation</span>
+          {% if sub_round1 %}
+            {% if sub_round1.status == 'pass' %}
+              <span class="round-status-pill status-passed">✓ PASSED</span>
+            {% else %}
+              <span class="round-status-pill status-failed">✕ FAILED</span>
+            {% endif %}
+          {% elif in_prog_round1 %}
+            <span class="round-status-pill status-inprog">⏳ In Progress</span>
+          {% else %}
+            <span class="round-status-pill status-ready">● Ready to Start</span>
+          {% endif %}
         </div>
-        <div>
-          <form method="POST" action="{{ url_for('candidate.logout') }}">
+
+        <h3 class="round-card-title">Online Preliminary Assessment</h3>
+        <p class="round-card-desc">General Aptitude, Analytical Reasoning, and Core Technical Foundations.</p>
+
+        <div class="spec-chips-list">
+          <span class="spec-chip">⏱️ 20 Minutes</span>
+          <span class="spec-chip">📝 20–30 MCQs</span>
+          <span class="spec-chip">🎯 25% Pass Cutoff</span>
+          <span class="spec-chip">🛡️ Screenshare Monitored</span>
+        </div>
+      </div>
+
+      <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        {% if sub_round1 %}
+          <div class="scorecard-mini">
+            <div class="sc-row">
+              <span class="sc-label">MCQs Score:</span>
+              <span class="sc-val">{{ sub_round1.score }} / {{ sub_round1.total_questions }}</span>
+            </div>
+            <div class="sc-row">
+              <span class="sc-label">Percentage:</span>
+              <span class="sc-val" style="color: #60a5fa;">{{ "%.1f"|format(sub_round1.percentage) }}%</span>
+            </div>
+            <div class="sc-row">
+              <span class="sc-label">Result:</span>
+              <span class="sc-val" style="color: {% if sub_round1.status == 'pass' %}#10b981{% else %}#ef4444{% endif %};">
+                {{ sub_round1.status|upper }}
+              </span>
+            </div>
+          </div>
+          <a href="{{ url_for('assessment.result', submission_id=sub_round1.id) }}" class="btn-view-score">
+            View Round 1 Scorecard →
+          </a>
+        {% elif in_prog_round1 %}
+          <form method="POST" action="{{ url_for('assessment.start') }}">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-            <button type="submit" class="btn btn-outline-light rounded-pill px-4 py-2" style="border-color: rgba(255,255,255,0.25); color: #fff; font-weight: 600;">
-              Log Out
+            <input type="hidden" name="assessment_id" value="{{ in_prog_round1.assessment_id }}"/>
+            <button type="submit" class="btn-launch-r1" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+              ▶️ Resume Round 1 Assessment
             </button>
           </form>
-        </div>
+        {% else %}
+          <form method="POST" action="{{ url_for('assessment.start') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <div style="margin-bottom: 12px; text-align: left;">
+              <label style="font-size: 11.5px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 6px; display: block;">Select Specialization Track:</label>
+              <select name="assessment_id" class="track-select-box">
+                {% if round1_assessments %}
+                  {% for a in round1_assessments %}
+                    <option value="{{ a.id }}">{{ a.title }} ({{ a.duration }} Mins)</option>
+                  {% endfor %}
+                {% else %}
+                  <option value="1">Comprehensive IT &amp; Software Engineering (20 Mins)</option>
+                  <option value="2">Non-IT, Healthcare BPO &amp; Operations (20 Mins)</option>
+                  <option value="3">Pharmacy &amp; Life Sciences (20 Mins)</option>
+                {% endif %}
+              </select>
+            </div>
+            <button type="submit" class="btn-launch-r1">
+              🚀 Start Round 1 Online Test
+            </button>
+          </form>
+        {% endif %}
       </div>
     </div>
 
-    <!-- Section Heading -->
-    <div class="mb-4">
-      <h3 class="fw-bold text-white mb-1" style="font-size: 22px;">Assessment Recruitment Stages</h3>
-      <p style="color: #94a3b8; font-size: 14px; margin: 0;">Select your active assessment round below</p>
-    </div>
-
-    <!-- Assessment Cards Grid -->
-    <div class="row g-4">
-      
-      <!-- Stage 1 Card -->
-      <div class="col-md-6">
-        <div class="stage-card stage-card-active-blue">
-          <div>
-            <span style="background: #2563eb; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 50px; text-transform: uppercase;">STAGE 1 — ROUND 1</span>
-            <h4 class="fw-bold text-white mt-2 mb-2" style="color: #60a5fa !important;">Round 1 Assessment</h4>
-            <p style="color: #cbd5e1; font-size: 14px;">General Aptitude, Technical & Domain Foundation Drive</p>
-            
-            <div class="mt-3">
-              <span class="meta-tag">⏱️ 20 Minutes</span>
-              <span class="meta-tag">📝 20–30 Questions</span>
-              <span class="meta-tag">🎯 25% Pass Cutoff</span>
-            </div>
-          </div>
-
-          <div class="mt-4 pt-3" style="border-top: 1px solid rgba(37, 99, 235, 0.3);">
-            {% if sub_round1 %}
-              <div class="result-score-box" style="background: rgba(37, 99, 235, 0.1);">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <span style="color: #e2e8f0; font-weight: 600;">Score: {{ sub_round1.score }}/{{ sub_round1.total_questions }}</span>
-                  {% if sub_round1.status == 'pass' %}
-                    <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 700; padding: 6px 12px; border-radius: 50px;">✔ PASSED</span>
-                  {% else %}
-                    <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 700; padding: 6px 12px; border-radius: 50px;">✖ FAILED</span>
-                  {% endif %}
-                </div>
-                <div style="color: #94a3b8; font-size: 13px;">Percentage: <strong class="text-white">{{ "%.1f"|format(sub_round1.percentage) }}%</strong></div>
-              </div>
-              <a href="{{ url_for('assessment.result', submission_id=sub_round1.id) }}" class="btn btn-outline-light w-100 py-2 fw-semibold" style="border-color: rgba(37, 99, 235, 0.5);">
-                View Round 1 Scorecard
-              </a>
-            {% elif in_prog_round1 %}
-              <div class="alert alert-info py-2 px-3 mb-3" style="background: rgba(37, 99, 235, 0.2); border-color: rgba(37, 99, 235, 0.4); color: #93c5fd; font-size: 13px;">
-                ⚠️ You have an active assessment session in progress.
-              </div>
-              <form method="POST" action="{{ url_for('assessment.start') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="assessment_id" value="{{ in_prog_round1.assessment_id }}"/>
-                <button type="submit" class="btn-start-round1">
-                  ▶️ Resume Round 1 Assessment
-                </button>
-              </form>
+    <!-- ── ROUND 2: TECHNICAL LIVE CODING (MONACO SANDBOX) ── -->
+    <div class="round-card round-card-r2">
+      <div>
+        <div class="round-header">
+          <span class="round-step-tag tag-r2">Round 2 — Live Coding</span>
+          {% if sub_round2 %}
+            {% if sub_round2.status == 'pass' %}
+              <span class="round-status-pill status-passed">✓ PASSED</span>
             {% else %}
-              <form method="POST" action="{{ url_for('assessment.start') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <div class="mb-3 text-start">
-                  <label class="form-label small fw-semibold text-white-50">Select Your Domain / Specialization Track:</label>
-                  <select name="assessment_id" class="form-select text-white" style="background: rgba(15, 23, 42, 0.95); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 10px 14px; font-size: 14px;">
-                    {% if round1_assessments %}
-                      {% for a in round1_assessments %}
-                        <option value="{{ a.id }}">{{ a.title }} ({{ a.duration }} Mins)</option>
-                      {% endfor %}
-                    {% else %}
-                      <option value="1">Comprehensive IT & Software Engineering (20 Mins)</option>
-                      <option value="2">Non-IT, Healthcare BPO & Operations (20 Mins)</option>
-                      <option value="3">Pharmacy & Life Sciences (20 Mins)</option>
-                    {% endif %}
-                  </select>
-                </div>
-                <button type="submit" class="btn-start-round1">
-                  🚀 Start Round 1 Assessment
-                </button>
-              </form>
+              <span class="round-status-pill status-failed">✕ FAILED</span>
             {% endif %}
-          </div>
+          {% elif in_prog_round2 %}
+            <span class="round-status-pill status-inprog">⏳ In Progress</span>
+          {% else %}
+            <span class="round-status-pill status-ready">● Ready to Start</span>
+          {% endif %}
+        </div>
+
+        <h3 class="round-card-title">Technical Live Coding Sandbox</h3>
+        <p class="round-card-desc">Hands-on algorithmic programming &amp; problem solving in an in-browser VS Code / Monaco IDE.</p>
+
+        <div class="spec-chips-list">
+          <span class="spec-chip">⏱️ 45 Minutes</span>
+          <span class="spec-chip">💻 2 Coding Challenges</span>
+          <span class="spec-chip">⚡ Python / JS / Java / C++</span>
+          <span class="spec-chip">🧪 Automated Testcases</span>
         </div>
       </div>
 
-      <!-- Stage 2 Card (Technical Round 2) -->
-      <div class="col-md-6">
-        <div class="stage-card stage-card-active-purple">
-          <div>
-            <span style="background: #7c3aed; color: #ffffff; font-size: 11px; font-weight: 800; padding: 5px 12px; border-radius: 50px; text-transform: uppercase;">STAGE 2 — ROUND 2</span>
-            <h4 class="fw-bold text-white mt-2 mb-2" style="color: #a78bfa !important;">Technical Round 2</h4>
-            <p style="color: #cbd5e1; font-size: 14px;">Medium-Level Core Java, Core Python & Core SQL Assessment</p>
-            
-            <div class="mt-3">
-              <span class="meta-tag">⏱️ 20 Minutes</span>
-              <span class="meta-tag">📝 20 Questions</span>
-              <span class="meta-tag">🎯 50% Pass Cutoff</span>
+      <div style="margin-top: auto; padding-top: 16px; border-top: 1px solid rgba(255, 255, 255, 0.08);">
+        {% if sub_round2 %}
+          <div class="scorecard-mini">
+            <div class="sc-row">
+              <span class="sc-label">Coding Score:</span>
+              <span class="sc-val" style="color: #c084fc;">{{ sub_round2.coding_score or 0 }} Pts</span>
+            </div>
+            <div class="sc-row">
+              <span class="sc-label">Percentage:</span>
+              <span class="sc-val">{{ "%.1f"|format(sub_round2.percentage) }}%</span>
+            </div>
+            <div class="sc-row">
+              <span class="sc-label">Status:</span>
+              <span class="sc-val" style="color: {% if sub_round2.status == 'pass' %}#10b981{% else %}#ef4444{% endif %};">
+                {{ sub_round2.status|upper }}
+              </span>
             </div>
           </div>
-
-          <div class="mt-4 pt-3" style="border-top: 1px solid rgba(124, 58, 237, 0.3);">
-            {% if sub_round2 %}
-              <div class="result-score-box" style="background: rgba(124, 58, 237, 0.1);">
-                <div class="d-flex justify-content-between align-items-center mb-1">
-                  <span style="color: #e2e8f0; font-weight: 600;">Score: {{ sub_round2.score }}/{{ sub_round2.total_questions }}</span>
-                  {% if sub_round2.status == 'pass' %}
-                    <span class="badge" style="background: rgba(16, 185, 129, 0.2); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.4); font-weight: 700; padding: 6px 12px; border-radius: 50px;">✔ PASSED</span>
-                  {% else %}
-                    <span class="badge" style="background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid rgba(239, 68, 68, 0.4); font-weight: 700; padding: 6px 12px; border-radius: 50px;">✖ FAILED</span>
-                  {% endif %}
-                </div>
-                <div style="color: #94a3b8; font-size: 13px;">Percentage: <strong class="text-white">{{ "%.1f"|format(sub_round2.percentage) }}%</strong></div>
-              </div>
-              <a href="{{ url_for('assessment.result', submission_id=sub_round2.id) }}" class="btn btn-outline-light w-100 py-2 fw-semibold" style="border-color: rgba(124, 58, 237, 0.5);">
-                View Round 2 Scorecard
-              </a>
-            {% elif in_prog_round2 %}
-              <div class="alert alert-info py-2 px-3 mb-3" style="background: rgba(124, 58, 237, 0.2); border-color: rgba(124, 58, 237, 0.4); color: #c4b5fd; font-size: 13px;">
-                ⚠️ You have an active assessment session in progress.
-              </div>
-              <form method="POST" action="{{ url_for('assessment.start') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="assessment_id" value="4"/>
-                <button type="submit" class="btn-start-round2">
-                  ▶️ Resume Technical Round 2
-                </button>
-              </form>
-            {% else %}
-              <form method="POST" action="{{ url_for('assessment.start') }}">
-                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
-                <input type="hidden" name="assessment_id" value="4"/>
-                <button type="submit" class="btn-start-round2">
-                  🚀 Start Technical Round 2
-                </button>
-              </form>
-            {% endif %}
-          </div>
-        </div>
+          <a href="{{ url_for('assessment.result', submission_id=sub_round2.id) }}" class="btn-view-score">
+            View Round 2 Scorecard →
+          </a>
+        {% elif in_prog_round2 %}
+          <form method="POST" action="{{ url_for('assessment.start') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="assessment_id" value="4"/>
+            <button type="submit" class="btn-launch-r2" style="background: linear-gradient(135deg, #f59e0b, #d97706);">
+              ▶️ Resume Live Coding Sandbox
+            </button>
+          </form>
+        {% else %}
+          <form method="POST" action="{{ url_for('assessment.start') }}">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            <input type="hidden" name="assessment_id" value="4"/>
+            <button type="submit" class="btn-launch-r2">
+              💻 Start Round 2 Live Coding Round
+            </button>
+          </form>
+        {% endif %}
       </div>
-
     </div>
 
   </div>
+
 </div>
 {% endblock %}
