@@ -179,12 +179,15 @@ class Submission(db.Model):
         nullable=False, index=True
     )
     score = db.Column(db.Integer, default=0)
+    coding_score = db.Column(db.Integer, default=0)
     total_questions = db.Column(db.Integer, default=0)
     percentage = db.Column(db.Float, default=0.0)
     violations = db.Column(db.Integer, default=0)
     status = db.Column(db.String(20), default='in_progress', index=True)  # in_progress | pass | fail
     submitted_at = db.Column(db.DateTime, nullable=True, index=True)
 
+    # Relationships
+    coding_submissions = db.relationship('CodingSubmission', backref='submission', cascade='all, delete-orphan', lazy='select')
     # Relationships — lazy='select' allows joinedload() in route queries
     answers = db.relationship(
         'Answer', backref='submission', lazy='select',
@@ -249,3 +252,137 @@ class Answer(db.Model):
 
     def __repr__(self):
         return f'<Answer sub={self.submission_id} q={self.question_id} opt={self.selected_option}>'
+
+
+# ─────────────────────────────────────────────
+# Coding Challenge Model
+# ─────────────────────────────────────────────
+class CodingProblem(db.Model):
+    __tablename__ = 'assessment_coding_problems'
+
+    id = db.Column(db.Integer, primary_key=True)
+    assessment_id = db.Column(
+        db.Integer, db.ForeignKey('assessment_drives.id', ondelete='CASCADE'),
+        nullable=True, index=True
+    )
+    title = db.Column(db.String(255), nullable=False)
+    difficulty = db.Column(db.String(20), default='Medium')
+    points = db.Column(db.Integer, default=100)
+    problem_statement = db.Column(db.Text, nullable=False)
+    input_format = db.Column(db.Text, nullable=True)
+    output_format = db.Column(db.Text, nullable=True)
+    constraints = db.Column(db.Text, nullable=True)
+    time_limit_seconds = db.Column(db.Integer, default=5)
+    memory_limit_mb = db.Column(db.Integer, default=256)
+    starter_code_json = db.Column(db.JSON, default=dict)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    # Relationships
+    testcases = db.relationship(
+        'CodingTestCase', backref='problem', cascade='all, delete-orphan',
+        lazy='select', order_by='CodingTestCase.id'
+    )
+    submissions = db.relationship(
+        'CodingSubmission', backref='problem', cascade='all, delete-orphan',
+        lazy='select'
+    )
+
+    def to_dict(self, include_testcases=False):
+        data = {
+            'id': self.id,
+            'assessment_id': self.assessment_id,
+            'title': self.title,
+            'difficulty': self.difficulty,
+            'points': self.points,
+            'problem_statement': self.problem_statement,
+            'input_format': self.input_format,
+            'output_format': self.output_format,
+            'constraints': self.constraints,
+            'time_limit_seconds': self.time_limit_seconds,
+            'memory_limit_mb': self.memory_limit_mb,
+            'starter_code_json': self.starter_code_json or {},
+            'sample_testcases': [tc.to_dict() for tc in self.testcases if not tc.is_hidden],
+        }
+        if include_testcases:
+            data['testcases'] = [tc.to_dict(include_hidden=True) for tc in self.testcases]
+        return data
+
+    def __repr__(self):
+        return f'<CodingProblem {self.title}>'
+
+
+# ─────────────────────────────────────────────
+# Coding Test Case Model
+# ─────────────────────────────────────────────
+class CodingTestCase(db.Model):
+    __tablename__ = 'assessment_coding_testcases'
+
+    id = db.Column(db.Integer, primary_key=True)
+    problem_id = db.Column(
+        db.Integer, db.ForeignKey('assessment_coding_problems.id', ondelete='CASCADE'),
+        nullable=False, index=True
+    )
+    input_data = db.Column(db.Text, nullable=False)
+    expected_output = db.Column(db.Text, nullable=False)
+    is_hidden = db.Column(db.Boolean, default=True)
+    weight = db.Column(db.Integer, default=10)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    def to_dict(self, include_hidden=False):
+        return {
+            'id': self.id,
+            'problem_id': self.problem_id,
+            'input_data': self.input_data if (not self.is_hidden or include_hidden) else 'Hidden',
+            'expected_output': self.expected_output if (not self.is_hidden or include_hidden) else 'Hidden',
+            'is_hidden': self.is_hidden,
+            'weight': self.weight
+        }
+
+    def __repr__(self):
+        return f'<CodingTestCase prob={self.problem_id} hidden={self.is_hidden}>'
+
+
+# ─────────────────────────────────────────────
+# Coding Submission Model
+# ─────────────────────────────────────────────
+class CodingSubmission(db.Model):
+    __tablename__ = 'assessment_coding_submissions'
+
+    id = db.Column(db.Integer, primary_key=True)
+    submission_id = db.Column(
+        db.Integer, db.ForeignKey('assessment_submissions.id', ondelete='CASCADE'),
+        nullable=False, index=True
+    )
+    problem_id = db.Column(
+        db.Integer, db.ForeignKey('assessment_coding_problems.id', ondelete='CASCADE'),
+        nullable=False, index=True
+    )
+    language = db.Column(db.String(30), nullable=False) # python, javascript, java, cpp
+    source_code = db.Column(db.Text, nullable=False)
+    passed_testcases = db.Column(db.Integer, default=0)
+    total_testcases = db.Column(db.Integer, default=0)
+    score = db.Column(db.Integer, default=0)
+    execution_time_ms = db.Column(db.Integer, default=0)
+    status = db.Column(db.String(30), default='Submitted') # Accepted, Wrong Answer, Time Limit Exceeded, Runtime Error, Compilation Error
+    submitted_at = db.Column(db.DateTime, default=datetime.utcnow, nullable=False)
+
+    __table_args__ = (
+        db.UniqueConstraint('submission_id', 'problem_id', name='uq_coding_submission_problem'),
+    )
+
+    def to_dict(self):
+        return {
+            'id': self.id,
+            'problem_id': self.problem_id,
+            'language': self.language,
+            'source_code': self.source_code,
+            'passed_testcases': self.passed_testcases,
+            'total_testcases': self.total_testcases,
+            'score': self.score,
+            'execution_time_ms': self.execution_time_ms,
+            'status': self.status,
+            'submitted_at': self.submitted_at.isoformat() if self.submitted_at else None
+        }
+
+    def __repr__(self):
+        return f'<CodingSubmission sub={self.submission_id} prob={self.problem_id} score={self.score}>'

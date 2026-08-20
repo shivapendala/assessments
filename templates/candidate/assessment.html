@@ -2,13 +2,226 @@
 {% block title %}Assessment — {{ assessment.title }}{% endblock %}
 {% block body_class %}assessment-page{% endblock %}
 
+{% block extra_head %}
+<!-- Monaco Editor Loader -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/monaco-editor/0.44.0/min/vs/loader.min.js"></script>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&display=swap">
+<style>
+  /* Section switcher */
+  .section-switcher-wrap {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    background: rgba(255, 255, 255, 0.05);
+    padding: 3px;
+    border-radius: 10px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
+  }
+  .sec-nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-muted, #94a3b8);
+    font-size: 13px;
+    font-weight: 700;
+    padding: 6px 14px;
+    border-radius: 7px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .sec-nav-btn:hover { color: #fff; }
+  .sec-nav-btn.active {
+    background: #1e1b4b;
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.3);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+  }
+
+  /* Coding Sandbox Layout */
+  #codingSection {
+    display: none;
+    width: 100%;
+    height: calc(100vh - 65px);
+    grid-template-columns: 42% 58%;
+    background: #0f172a;
+    overflow: hidden;
+  }
+  .code-left-pane {
+    border-right: 1px solid rgba(255, 255, 255, 0.1);
+    background: rgba(15, 23, 42, 0.95);
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow-y: auto;
+  }
+  .prob-header {
+    padding: 16px 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+  .prob-tabs-bar {
+    display: flex;
+    gap: 6px;
+    padding: 10px 20px;
+    background: rgba(0, 0, 0, 0.25);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .prob-tab-btn {
+    background: none;
+    border: none;
+    color: #94a3b8;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 6px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .prob-tab-btn.active {
+    background: rgba(139, 92, 246, 0.2);
+    color: #a78bfa;
+    border: 1px solid rgba(139, 92, 246, 0.4);
+  }
+  .prob-body-content {
+    padding: 20px;
+    line-height: 1.7;
+    color: #cbd5e1;
+    font-size: 13.5px;
+    flex-grow: 1;
+  }
+  .prob-sec-header {
+    font-size: 12px;
+    font-weight: 800;
+    color: #a78bfa;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin: 16px 0 6px;
+  }
+  .code-snippet-box {
+    background: rgba(0, 0, 0, 0.45);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 10px 14px;
+    font-family: 'Fira Code', monospace;
+    font-size: 12.5px;
+    color: #f1f5f9;
+    margin: 8px 0;
+    white-space: pre-wrap;
+  }
+
+  /* Right Editor Pane */
+  .code-right-pane {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #1e1e1e;
+  }
+  .editor-top-tools {
+    height: 42px;
+    background: #181818;
+    border-bottom: 1px solid #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+    flex-shrink: 0;
+  }
+  .code-lang-select {
+    background: #252526;
+    color: #fff;
+    border: 1px solid #3c3c3c;
+    padding: 4px 10px;
+    border-radius: 6px;
+    font-size: 12px;
+    font-weight: 600;
+    outline: none;
+  }
+  #monacoEditorBox {
+    flex-grow: 1;
+    width: 100%;
+    height: 100%;
+    min-height: 180px;
+  }
+
+  /* Console Drawer */
+  .code-console-drawer {
+    height: 210px;
+    background: #141414;
+    border-top: 1px solid #2d2d2d;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+  }
+  .console-bar-header {
+    height: 36px;
+    background: #1a1a1a;
+    border-bottom: 1px solid #2d2d2d;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0 16px;
+  }
+  .con-tabs-list { display: flex; gap: 4px; }
+  .con-tab-btn {
+    background: none;
+    border: none;
+    color: #888;
+    font-size: 12px;
+    font-weight: 600;
+    padding: 4px 10px;
+    border-radius: 4px;
+    cursor: pointer;
+  }
+  .con-tab-btn.active { color: #a78bfa; background: #252526; }
+  .btn-run-sample {
+    background: #2d2d2d;
+    border: 1px solid #444;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-run-sample:hover { background: #3a3a3a; }
+  .btn-submit-code-prob {
+    background: linear-gradient(135deg, #10b981, #059669);
+    border: none;
+    color: #fff;
+    font-size: 12px;
+    font-weight: 700;
+    padding: 5px 16px;
+    border-radius: 6px;
+    cursor: pointer;
+  }
+  .btn-submit-code-prob:hover { opacity: .9; }
+  .console-content-box {
+    flex-grow: 1;
+    padding: 10px 16px;
+    overflow-y: auto;
+    font-family: 'Fira Code', monospace;
+    font-size: 12px;
+    color: #cbd5e1;
+  }
+  .tc-res-card {
+    background: #1e1e1e;
+    border: 1px solid #333;
+    border-radius: 6px;
+    padding: 8px 12px;
+    margin-bottom: 6px;
+  }
+  .tc-passed-border { border-left: 3px solid #10b981; }
+  .tc-failed-border { border-left: 3px solid #ef4444; }
+</style>
+{% endblock %}
+
 {% block body %}
 <!-- Screenshare Proctoring Setup Overlay -->
 <div class="violation-overlay" id="screenshareOverlay" style="display: flex;">
   <div class="violation-card glass-card">
     <div class="vio-icon">🖥️</div>
     <h2 class="vio-title" style="color: var(--violet);">Proctoring Setup Required</h2>
-    <p class="vio-msg">This assessment is monitored. You must share your <strong>Entire Screen</strong> before you can view the questions. If you stop sharing at any point, your assessment will be submitted automatically.</p>
+    <p class="vio-msg">This assessment is monitored. You must share your <strong>Entire Screen</strong> before you can view questions or live coding challenges.</p>
     <button class="btn btn-primary btn-lg btn-full" id="startScreenshareBtn" onclick="requestScreenshare()">Enable Screenshare &amp; Start Test</button>
   </div>
 </div>
@@ -24,7 +237,7 @@
   </div>
 </div>
 
-<!-- Auto-submit / Submitting overlay (full-page, shown on both manual + auto submit) -->
+<!-- Auto-submit / Submitting overlay -->
 <div id="submittingOverlay" style="
   display: none;
   position: fixed; inset: 0;
@@ -36,12 +249,9 @@
   gap: 28px;
   font-family: var(--font);
 ">
-  <!-- Clean Logo -->
   <div style="display: flex; align-items: center; justify-content: center; max-width: 280px; height: 60px;">
     <span style="font-size: 24px; font-weight: 800; color: #f1f5f9; letter-spacing: -0.02em;">ElevateIQ</span>
   </div>
-
-  <!-- Spinner -->
   <div style="position:relative;width:72px;height:72px;">
     <svg viewBox="0 0 72 72" style="width:72px;height:72px;animation:spinRing 1.4s linear infinite;">
       <circle cx="36" cy="36" r="30" fill="none" stroke="rgba(139,92,246,0.15)" stroke-width="6"/>
@@ -50,8 +260,6 @@
               style="transform-origin:center;animation:spinArc 1.4s ease-in-out infinite;"/>
     </svg>
   </div>
-
-  <!-- Message -->
   <div style="text-align:center;">
     <h2 id="submittingTitle" style="font-size:22px;font-weight:800;color:#f1f5f9;letter-spacing:-0.02em;margin-bottom:8px;">
       Submitting Your Assessment…
@@ -60,22 +268,11 @@
       Please wait. Do not close this tab.
     </p>
   </div>
-
-  <!-- Progress dots -->
-  <div style="display:flex;gap:8px;">
-    <span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;animation:dotBounce 1.2s ease-in-out infinite;"></span>
-    <span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;animation:dotBounce 1.2s ease-in-out 0.2s infinite;"></span>
-    <span style="width:8px;height:8px;border-radius:50%;background:#8b5cf6;animation:dotBounce 1.2s ease-in-out 0.4s infinite;"></span>
-  </div>
 </div>
 
 <style>
 @keyframes spinRing { to { transform: rotate(360deg); } }
 @keyframes spinArc  { 0%,100%{stroke-dashoffset:0} 50%{stroke-dashoffset:100} }
-@keyframes dotBounce {
-  0%,80%,100%{transform:translateY(0);opacity:0.4}
-  40%{transform:translateY(-10px);opacity:1}
-}
 </style>
 
 <!-- Assessment Layout -->
@@ -86,6 +283,16 @@
     <div class="exam-brand">
       <img src="{{ url_for('static', filename='image.png') }}" alt="ElevateIQ Logo" style="height: 32px; width: auto; object-fit: contain;" />
       <span class="exam-assessment-title">{{ assessment.title }}</span>
+    </div>
+
+    <!-- Section Switcher Tabs -->
+    <div class="section-switcher-wrap">
+      <button class="sec-nav-btn active" id="btnSecMcq" onclick="switchMainSection('mcq')">
+        📝 Section 1: MCQs ({{ questions|length }})
+      </button>
+      <button class="sec-nav-btn" id="btnSecCoding" onclick="switchMainSection('coding')">
+        💻 Section 2: Live Coding ({{ coding_problems|length }})
+      </button>
     </div>
 
     <!-- Timer -->
@@ -99,21 +306,14 @@
         <span class="ec-name">{{ candidate.full_name }}</span>
         <span class="ec-ht">{{ candidate.hall_ticket }}</span>
       </div>
-      {% if submission.violations > 0 %}
-      <div class="vio-indicator" id="vioIndicator">
+      <div class="vio-indicator {% if submission.violations == 0 %}vio-clear{% endif %}" id="vioIndicator">
         ⚠ <span id="vioHeader">{{ submission.violations }}</span>/3 violations
       </div>
-      {% else %}
-      <div class="vio-indicator vio-clear" id="vioIndicator">
-        ✓ <span id="vioHeader">0</span>/3 violations
-      </div>
-      {% endif %}
     </div>
   </header>
 
-  <!-- Body -->
-  <div class="exam-body">
-
+  <!-- ── SECTION 1: MCQ BODY ── -->
+  <div class="exam-body" id="mcqExamBody">
     <!-- Question Panel -->
     <section class="question-panel" id="questionPanel">
       <div class="q-progress">
@@ -124,7 +324,6 @@
       </div>
 
       <div class="q-content" id="questionContent">
-        <!-- Populated by JS -->
         <div class="q-loading">Loading question…</div>
       </div>
 
@@ -194,9 +393,59 @@
           <span style="font-size: 8px; font-weight: 800; color: var(--danger); letter-spacing: 0.05em; text-transform: uppercase;">SECURE FEED ACTIVE</span>
         </div>
       </div>
-
     </aside>
   </div>
+
+  <!-- ── SECTION 2: LIVE CODING SANDBOX (SPLIT IDE) ── -->
+  <div id="codingSection">
+    <!-- Left Pane: Problem Description -->
+    <div class="code-left-pane">
+      <div class="prob-header">
+        <div style="font-weight: 800; font-size: 16px; color: #fff;" id="probTitleText">Coding Challenge</div>
+        <div style="font-size: 11px; font-weight: 700; background: rgba(16, 185, 129, 0.15); color: #10b981; padding: 3px 8px; border-radius: 4px;" id="probDiffBadge">Easy</div>
+      </div>
+      <div class="prob-tabs-bar" id="codingProblemTabs"></div>
+      <div class="prob-body-content" id="codingProblemBody">
+        <!-- Injected via JS -->
+      </div>
+    </div>
+
+    <!-- Right Pane: Monaco IDE -->
+    <div class="code-right-pane">
+      <div class="editor-top-tools">
+        <select class="code-lang-select" id="codeLangSelect" onchange="onCodeLangChange()">
+          <option value="python">Python 3.11</option>
+          <option value="javascript">JavaScript (Node.js)</option>
+          <option value="java">Java 17</option>
+          <option value="cpp">C++ 17</option>
+        </select>
+        <div style="display: flex; gap: 8px;">
+          <button style="background:none;border:none;color:#94a3b8;font-size:11px;cursor:pointer;" onclick="resetCodingTemplate()">↺ Reset Code</button>
+        </div>
+      </div>
+
+      <div id="monacoEditorBox"></div>
+
+      <!-- Bottom Console Drawer -->
+      <div class="code-console-drawer">
+        <div class="console-bar-header">
+          <div class="con-tabs-list">
+            <button class="con-tab-btn active" id="conTabSample" onclick="switchConsoleTab('sample')">Sample Testcases</button>
+            <button class="con-tab-btn" id="conTabCustom" onclick="switchConsoleTab('custom')">Custom Input</button>
+            <button class="con-tab-btn" id="conTabSubmission" onclick="switchConsoleTab('submission')">Submission Results</button>
+          </div>
+          <div style="display: flex; gap: 8px;">
+            <button class="btn-run-sample" onclick="executeSampleCode()" id="btnRunSample">▶ Run Sample Cases</button>
+            <button class="btn-submit-code-prob" onclick="submitProblemSolution()" id="btnSubmitCodeProb">⚡ Submit Code</button>
+          </div>
+        </div>
+        <div class="console-content-box" id="consoleOutputBox">
+          <div style="color: #64748b; padding: 6px;">Click <strong>▶ Run Sample Cases</strong> to test against example inputs, or <strong>⚡ Submit Code</strong> to run the full hidden test suite.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </div>
 
 <!-- Submit Form (hidden) -->
@@ -204,16 +453,19 @@
   <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
 </form>
 
-<!-- Questions Data (injected for JS) -->
+<!-- Data Injected for JS -->
 <script>
   const QUESTIONS = {{ questions_data | tojson }};
   const SAVED_ANSWERS = {{ saved_answers | tojson }};
+  const CODING_PROBLEMS = {{ coding_problems | tojson }};
   const TOTAL_DURATION_SECONDS = {{ assessment.duration * 60 }};
   const SUBMISSION_ID = {{ submission.id }};
   const INITIAL_VIOLATIONS = {{ submission.violations }};
   const SAVE_URL = "{{ url_for('assessment.save_answer') }}";
   const VIOLATION_URL = "{{ url_for('assessment.record_violation') }}";
   const SUBMIT_URL = "{{ url_for('assessment.submit') }}";
+  const CODE_RUN_URL = "{{ url_for('assessment.run_code') }}";
+  const CODE_SUBMIT_URL = "{{ url_for('assessment.submit_code') }}";
 </script>
 {% endblock %}
 

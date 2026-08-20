@@ -84,21 +84,21 @@
       </div>
 
       <!-- Stats Breakdown -->
-      <div class="result-stats">
+      <div class="result-stats" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));">
         <div class="rs-item rs-correct">
-          <span class="rs-icon">✓</span>
+          <span class="rs-icon">📝</span>
           <span class="rs-value">{{ submission.score }}</span>
-          <span class="rs-label">Correct</span>
+          <span class="rs-label">MCQs Correct</span>
+        </div>
+        <div class="rs-item" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
+          <span class="rs-icon" style="color: #a78bfa;">💻</span>
+          <span class="rs-value" style="color: #a78bfa;">{{ submission.coding_score or 0 }}</span>
+          <span class="rs-label" style="color: #a78bfa;">Coding Pts</span>
         </div>
         <div class="rs-item rs-wrong">
           <span class="rs-icon">✕</span>
           <span class="rs-value">{{ wrong }}</span>
-          <span class="rs-label">Wrong</span>
-        </div>
-        <div class="rs-item rs-skip">
-          <span class="rs-icon">—</span>
-          <span class="rs-value">{{ unanswered }}</span>
-          <span class="rs-label">Skipped</span>
+          <span class="rs-label">MCQs Wrong</span>
         </div>
         <div class="rs-item rs-vio">
           <span class="rs-icon">⚠</span>

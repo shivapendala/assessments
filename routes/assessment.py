@@ -13,7 +13,8 @@ from sqlalchemy import func
 from sqlalchemy.orm import joinedload
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 
-from models.models import db, Assessment, Question, Submission, Answer, Candidate
+from models.models import db, Assessment, Question, Submission, Answer, Candidate, CodingProblem, CodingTestCase, CodingSubmission
+from utils.code_sandbox import execute_testcase, execute_testcase_suite
 from utils.helpers import candidate_required, assessment_session_required, api_success, api_error
 
 assessment_bp = Blueprint('assessment', __name__, url_prefix='/assessment')
@@ -147,12 +148,29 @@ def engine():
         q_dict['options'] = opts
         questions_data.append(q_dict)
 
+    # Fetch Coding Problems for Section 2 (Assessment-specific or Global)
+    coding_problems = CodingProblem.query.filter(
+        db.or_(CodingProblem.assessment_id == assessment_id, CodingProblem.assessment_id.is_(None))
+    ).order_by(CodingProblem.id).all()
+
+    coding_problems_data = []
+    for p in coding_problems:
+        p_dict = p.to_dict()
+        # Find any saved submission for this problem
+        saved_sub = CodingSubmission.query.filter_by(
+            submission_id=submission_id,
+            problem_id=p.id
+        ).first()
+        p_dict['saved_submission'] = saved_sub.to_dict() if saved_sub else None
+        coding_problems_data.append(p_dict)
+
     return render_template(
         'candidate/assessment.html',
         assessment=assessment,
         questions=shuffled_questions,
         questions_data=questions_data,
         saved_answers=saved_answers,
+        coding_problems=coding_problems_data,
         submission=submission,
         candidate=candidate,
     )
@@ -232,6 +250,152 @@ def save_answer():
 # RECORD VIOLATION (AJAX)
 # ─────────────────────────────────────────────
 
+
+# ─────────────────────────────────────────────
+# LIVE CODING SANDBOX (AJAX RUN & SUBMIT)
+# ─────────────────────────────────────────────
+
+@assessment_bp.route('/code/run', methods=['POST'])
+@assessment_session_required
+def run_code():
+    """Execute candidate code against sample testcases or custom input."""
+    submission_id = session.get('submission_id')
+    submission = db.session.get(Submission, submission_id)
+    if not submission or submission.status != 'in_progress':
+        return api_error('Assessment session expired or inactive.', 403)
+
+    data = request.get_json(silent=True) or {}
+    problem_id = data.get('problem_id')
+    language = (data.get('language') or 'python').strip()
+    source_code = data.get('source_code') or ''
+    custom_input = data.get('custom_input')
+
+    if not source_code:
+        return api_error('Source code is required.', 400)
+
+    if custom_input is not None:
+        res = execute_testcase(source_code, language, custom_input, expected_output=None)
+        return jsonify({
+            'mode': 'custom',
+            'status': res['status'],
+            'passed': res['passed'],
+            'actual_output': res['actual_output'],
+            'stderr': res['stderr'],
+            'execution_time_ms': res['execution_time_ms'],
+            'error': res['error']
+        }), 200
+
+    # Fetch public sample testcases
+    sample_cases = CodingTestCase.query.filter_by(
+        problem_id=problem_id,
+        is_hidden=False
+    ).order_by(CodingTestCase.id).all()
+
+    if not sample_cases:
+        res = execute_testcase(source_code, language, '', expected_output=None)
+        return jsonify({
+            'mode': 'empty',
+            'status': res['status'],
+            'actual_output': res['actual_output'],
+            'stderr': res['stderr'],
+            'execution_time_ms': res['execution_time_ms']
+        }), 200
+
+    testcases_dicts = [tc.to_dict(include_hidden=True) for tc in sample_cases]
+    suite_res = execute_testcase_suite(source_code, language, testcases_dicts)
+
+    return jsonify({
+        'mode': 'sample_suite',
+        'all_passed': suite_res['all_passed'],
+        'passed_count': suite_res['passed_count'],
+        'total_count': suite_res['total_count'],
+        'overall_status': suite_res['overall_status'],
+        'results': suite_res['results']
+    }), 200
+
+
+@assessment_bp.route('/code/submit', methods=['POST'])
+@assessment_session_required
+def submit_code():
+    """Evaluate code against ALL testcases (hidden + sample) and save score."""
+    submission_id = session.get('submission_id')
+    submission = db.session.get(Submission, submission_id)
+    if not submission or submission.status != 'in_progress':
+        return api_error('Assessment session expired or inactive.', 403)
+
+    data = request.get_json(silent=True) or {}
+    problem_id = data.get('problem_id')
+    language = (data.get('language') or 'python').strip()
+    source_code = data.get('source_code') or ''
+
+    if not problem_id or not source_code:
+        return api_error('Problem ID and source code are required.', 400)
+
+    problem = db.session.get(CodingProblem, problem_id)
+    if not problem:
+        return api_error('Problem not found.', 404)
+
+    all_testcases = CodingTestCase.query.filter_by(problem_id=problem_id).order_by(
+        CodingTestCase.is_hidden.asc(), CodingTestCase.id.asc()
+    ).all()
+
+    if not all_testcases:
+        return api_error('No testcases configured for this problem.', 400)
+
+    testcases_dicts = [tc.to_dict(include_hidden=True) for tc in all_testcases]
+    suite_res = execute_testcase_suite(source_code, language, testcases_dicts)
+
+    # Upsert CodingSubmission
+    coding_sub = CodingSubmission.query.filter_by(
+        submission_id=submission_id,
+        problem_id=problem_id
+    ).first()
+
+    if not coding_sub:
+        coding_sub = CodingSubmission(
+            submission_id=submission_id,
+            problem_id=problem_id,
+            language=language,
+            source_code=source_code,
+            passed_testcases=suite_res['passed_count'],
+            total_testcases=suite_res['total_count'],
+            score=suite_res['total_score'],
+            execution_time_ms=max((r['execution_time_ms'] for r in suite_res['results']), default=0),
+            status=suite_res['overall_status'],
+            submitted_at=datetime.utcnow()
+        )
+        db.session.add(coding_sub)
+    else:
+        coding_sub.language = language
+        coding_sub.source_code = source_code
+        coding_sub.passed_testcases = suite_res['passed_count']
+        coding_sub.total_testcases = suite_res['total_count']
+        coding_sub.score = suite_res['total_score']
+        coding_sub.execution_time_ms = max((r['execution_time_ms'] for r in suite_res['results']), default=0)
+        coding_sub.status = suite_res['overall_status']
+        coding_sub.submitted_at = datetime.utcnow()
+
+    # Update Submission total coding score
+    db.session.flush()
+    total_coding_pts = db.session.query(func.coalesce(func.sum(CodingSubmission.score), 0)).filter_by(
+        submission_id=submission_id
+    ).scalar() or 0
+    submission.coding_score = total_coding_pts
+
+    db.session.commit()
+
+    return jsonify({
+        'message': 'Code submitted successfully.',
+        'all_passed': suite_res['all_passed'],
+        'passed_count': suite_res['passed_count'],
+        'total_count': suite_res['total_count'],
+        'score': suite_res['total_score'],
+        'max_score': suite_res['max_score'],
+        'overall_status': suite_res['overall_status'],
+        'results': suite_res['results']
+    }), 200
+
+
 @assessment_bp.route('/record-violation', methods=['POST'])
 @assessment_session_required
 def record_violation():
@@ -297,6 +461,18 @@ def submit():
     percentage = (correct / total * 100) if total > 0 else 0
     pass_pct = submission.assessment.pass_percentage if submission.assessment else 25.0
     status = 'pass' if percentage >= pass_pct else 'fail'
+
+    # Sum coding score from coding submissions
+    total_coding_pts = db.session.query(func.coalesce(func.sum(CodingSubmission.score), 0)).filter_by(
+        submission_id=submission.id
+    ).scalar() or 0
+    submission.coding_score = total_coding_pts
+
+    # Total score and combined percentage
+    # (assuming 15 MCQs = 150 pts + 2 Coding Problems = 200 pts => 350 pts total)
+    max_pts = (total * 10) + 200 if total > 0 else 350
+    earned_pts = (correct * 10) + total_coding_pts
+    percentage = (earned_pts / max_pts * 100) if max_pts > 0 else 0
 
     submission.score = correct
     submission.total_questions = total
