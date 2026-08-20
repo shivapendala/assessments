@@ -19,6 +19,10 @@ let currentMainSection = 'mcq';
 let currentProblemIndex = 0;
 let monacoEditorInstance = null;
 
+// Anti-Cheat Proctoring State
+let antiCheatActive = false;
+let lastViolationTimestamp = 0;
+
 const LS_KEY_TIMER   = `eq_timer_${SUBMISSION_ID}`;
 const LS_KEY_ANSWERS = `eq_answers_${SUBMISSION_ID}`;
 
@@ -96,6 +100,10 @@ async function requestScreenshare() {
     startTimer();
     renderQuestion(currentQuestion);
     updateNavGrid();
+    
+    setTimeout(() => {
+      antiCheatActive = true;
+    }, 3000);
     return;
   }
 
@@ -136,6 +144,11 @@ async function requestScreenshare() {
     startTimer();
     renderQuestion(currentQuestion);
     updateNavGrid();
+    
+    // Activate anti-cheat after a 3-second grace period for focus stabilization
+    setTimeout(() => {
+      antiCheatActive = true;
+    }, 3000);
   } catch (err) {
     alert('Screenshare permission is mandatory to attempt this assessment.');
     btn.disabled = false;
@@ -145,18 +158,27 @@ async function requestScreenshare() {
 
 // ── Anti-Cheat ───────────────────────────────────────────────
 function setupAntiCheatListeners() {
+  // Use visibilitychange to detect true tab switches & minimizing (avoids false blur triggers)
   document.addEventListener('visibilitychange', () => {
-    if (document.hidden && !isSubmitting) recordViolation('tab_switch');
+    if (document.hidden && antiCheatActive && !isSubmitting) {
+      recordViolation('tab_switch');
+    }
   });
 
-  window.addEventListener('blur', () => {
-    if (!isSubmitting) recordViolation('window_blur');
-  });
-
+  // Prevent right-click inspection during test
   document.addEventListener('contextmenu', e => e.preventDefault());
 }
 
 async function recordViolation(reason) {
+  if (!antiCheatActive || isSubmitting) return;
+
+  const now = Date.now();
+  // De-duplicate rapid triggers within 3.5 seconds
+  if (now - lastViolationTimestamp < 3500) {
+    return;
+  }
+  lastViolationTimestamp = now;
+
   violations++;
   updateViolationUI(violations);
 
