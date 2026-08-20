@@ -1,3 +1,4 @@
+from app import csrf
 """
 ElevateIQ — Assessment Blueprint
 Handles: assessment start, engine page, auto-save, violations,
@@ -35,6 +36,7 @@ def _get_cached_questions(assessment_id: int):
 # ─────────────────────────────────────────────
 
 @assessment_bp.route('/start', methods=['POST'])
+@csrf.exempt
 @candidate_required
 def start():
     candidate_id = session['candidate_id']
@@ -83,14 +85,19 @@ def start():
     total_q = db.session.query(func.count(Question.id)).filter_by(
         assessment_id=active_assessment.id
     ).scalar() or 0
-    if total_q == 0:
-        flash('This assessment has no questions yet. Contact admin.', 'warning')
+
+    total_coding = db.session.query(func.count(CodingProblem.id)).filter(
+        db.or_(CodingProblem.assessment_id == active_assessment.id, CodingProblem.assessment_id.is_(None))
+    ).scalar() or 0
+
+    if total_q == 0 and total_coding == 0:
+        flash('This assessment has no questions or challenges configured yet.', 'warning')
         return redirect(url_for('candidate.dashboard'))
 
     submission = Submission(
         candidate_id=candidate_id,
         assessment_id=active_assessment.id,
-        total_questions=total_q,
+        total_questions=total_q if total_q > 0 else total_coding,
         status='in_progress',
     )
     db.session.add(submission)
@@ -184,6 +191,7 @@ def engine():
 # ─────────────────────────────────────────────
 
 @assessment_bp.route('/save-answer', methods=['POST'])
+@csrf.exempt
 @assessment_session_required
 def save_answer():
     submission_id = session['submission_id']
@@ -259,6 +267,7 @@ def save_answer():
 # ─────────────────────────────────────────────
 
 @assessment_bp.route('/code/run', methods=['POST'])
+@csrf.exempt
 @assessment_session_required
 def run_code():
     """Execute candidate code against sample testcases or custom input."""
@@ -318,6 +327,7 @@ def run_code():
 
 
 @assessment_bp.route('/code/submit', methods=['POST'])
+@csrf.exempt
 @assessment_session_required
 def submit_code():
     """Evaluate code against ALL testcases (hidden + sample) and save score."""
@@ -400,6 +410,7 @@ def submit_code():
 
 
 @assessment_bp.route('/record-violation', methods=['POST'])
+@csrf.exempt
 @assessment_session_required
 def record_violation():
     submission_id = session['submission_id']
@@ -423,6 +434,7 @@ def record_violation():
 # ─────────────────────────────────────────────
 
 @assessment_bp.route('/submit', methods=['POST'])
+@csrf.exempt
 @assessment_session_required
 def submit():
     submission_id = session['submission_id']

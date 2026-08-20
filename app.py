@@ -55,7 +55,8 @@ def create_app(config_class=None):
     login_manager.session_protection = 'basic'
 
     # ── CSRF: allow JSON API calls with X-CSRFToken header ─────────────────
-    app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken']
+    app.config['WTF_CSRF_HEADERS'] = ['X-CSRFToken', 'X-CSRF-Token', 'X-Csrftoken', 'x-csrftoken', 'x-csrf-token']
+    app.config['WTF_CSRF_TIME_LIMIT'] = None
 
     # ── Blueprints ─────────────────────────────────────────────────────────
     from routes.admin import admin_bp

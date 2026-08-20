@@ -51,7 +51,7 @@ class Config:
     SECRET_KEY = os.environ.get('SECRET_KEY', 'dev-secret-key-change-in-production')
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     WTF_CSRF_ENABLED = True
-    WTF_CSRF_TIME_LIMIT = 7200  # 2 hours
+    WTF_CSRF_TIME_LIMIT = None  # 2 hours
 
     # Session security
     SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'False').lower() == 'true'

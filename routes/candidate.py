@@ -36,6 +36,7 @@ def index():
 
 
 @candidate_bp.route('/register', methods=['GET', 'POST'])
+@csrf.exempt
 def register():
     if request.args.get('logout') == '1':
         session.clear()
