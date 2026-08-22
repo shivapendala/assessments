@@ -126,52 +126,54 @@ def engine():
     assessment = db.session.get(Assessment, assessment_id)
     candidate = db.session.get(Candidate, session['candidate_id'])
 
-    # Use cached questions instead of a fresh DB query
-    questions = _get_cached_questions(assessment_id)
-    
-    # Jumble question order deterministically per candidate session (thread-safe)
-    rng = random.Random(f"sub_{submission_id}_cand_{candidate.id}")
-    shuffled_questions = list(questions)  # copy to avoid mutating cache
-    rng.shuffle(shuffled_questions)
+    is_coding_round = (assessment_id == 4 or 'Coding' in (assessment.title or '') or 'Round 2' in (assessment.title or ''))
 
-    # Load saved answers for this submission
-    saved_answers = {
-        a.question_id: a.selected_option
-        for a in Answer.query.filter_by(submission_id=submission_id).all()
-    }
+    if is_coding_round:
+        shuffled_questions = []
+        questions_data = []
+        saved_answers = {}
+        # Fetch Coding Problems for Round 2 ONLY
+        coding_problems = CodingProblem.query.filter(
+            db.or_(CodingProblem.assessment_id == assessment_id, CodingProblem.assessment_id.is_(None))
+        ).order_by(CodingProblem.id).all()
 
-    # Build questions_data with jumbled options for each question
-    questions_data = []
-    for q in shuffled_questions:
-        q_dict = q.to_dict()
-        opts = [
-            {'key': 'A', 'text': q.option_a},
-            {'key': 'B', 'text': q.option_b},
-            {'key': 'C', 'text': q.option_c},
-            {'key': 'D', 'text': q.option_d},
-        ]
-        q_rng = random.Random(f"sub_{submission_id}_q_{q.id}")
-        q_rng.shuffle(opts)
-        q_dict['options'] = opts
-        questions_data.append(q_dict)
+        coding_problems_data = []
+        for p in coding_problems:
+            p_dict = p.to_dict()
+            saved_sub = CodingSubmission.query.filter_by(
+                submission_id=submission_id,
+                problem_id=p.id
+            ).first()
+            p_dict['saved_submission'] = saved_sub.to_dict() if saved_sub else None
+            coding_problems_data.append(p_dict)
+    else:
+        # Round 1: Online Assessment (MCQs) ONLY
+        coding_problems_data = []
+        questions = _get_cached_questions(assessment_id)
+        
+        # Jumble question order deterministically per candidate session (thread-safe)
+        rng = random.Random(f"sub_{submission_id}_cand_{candidate.id}")
+        shuffled_questions = list(questions)
+        rng.shuffle(shuffled_questions)
 
-    # Fetch Coding Problems for Section 2 (Assessment-specific or Global)
-    coding_problems = CodingProblem.query.filter(
-        db.or_(CodingProblem.assessment_id == assessment_id, CodingProblem.assessment_id.is_(None))
-    ).order_by(CodingProblem.id).all()
+        saved_answers = {
+            a.question_id: a.selected_option
+            for a in Answer.query.filter_by(submission_id=submission_id).all()
+        }
 
-    coding_problems_data = []
-    for p in coding_problems:
-        p_dict = p.to_dict()
-        # Find any saved submission for this problem
-        saved_sub = CodingSubmission.query.filter_by(
-            submission_id=submission_id,
-            problem_id=p.id
-        ).first()
-        p_dict['saved_submission'] = saved_sub.to_dict() if saved_sub else None
-        coding_problems_data.append(p_dict)
-
-    is_coding_round = (assessment_id == 4 or 'Coding' in (assessment.title or '') or 'Round 2' in (assessment.title or '') or len(shuffled_questions) == 0)
+        questions_data = []
+        for q in shuffled_questions:
+            q_dict = q.to_dict()
+            opts = [
+                {'key': 'A', 'text': q.option_a},
+                {'key': 'B', 'text': q.option_b},
+                {'key': 'C', 'text': q.option_c},
+                {'key': 'D', 'text': q.option_d},
+            ]
+            q_rng = random.Random(f"sub_{submission_id}_q_{q.id}")
+            q_rng.shuffle(opts)
+            q_dict['options'] = opts
+            questions_data.append(q_dict)
 
     return render_template(
         'candidate/assessment.html',
@@ -298,26 +300,21 @@ def run_code():
         }), 200
 
     # Fetch public sample testcases
-    sample_cases = CodingTestCase.query.filter_by(
-        problem_id=problem_id,
-        is_hidden=False
+    sample_testcases = CodingTestCase.query.filter_by(
+        problem_id=problem_id, is_hidden=False
     ).order_by(CodingTestCase.id).all()
 
-    if not sample_cases:
-        res = execute_testcase(source_code, language, '', expected_output=None)
-        return jsonify({
-            'mode': 'empty',
-            'status': res['status'],
-            'actual_output': res['actual_output'],
-            'stderr': res['stderr'],
-            'execution_time_ms': res['execution_time_ms']
-        }), 200
+    if not sample_testcases:
+        # Fallback to first testcase
+        sample_testcases = CodingTestCase.query.filter_by(
+            problem_id=problem_id
+        ).order_by(CodingTestCase.id).limit(2).all()
 
-    testcases_dicts = [tc.to_dict(include_hidden=True) for tc in sample_cases]
+    testcases_dicts = [tc.to_dict(include_hidden=True) for tc in sample_testcases]
     suite_res = execute_testcase_suite(source_code, language, testcases_dicts)
 
     return jsonify({
-        'mode': 'sample_suite',
+        'mode': 'sample',
         'all_passed': suite_res['all_passed'],
         'passed_count': suite_res['passed_count'],
         'total_count': suite_res['total_count'],
@@ -330,7 +327,7 @@ def run_code():
 @csrf.exempt
 @assessment_session_required
 def submit_code():
-    """Evaluate code against ALL testcases (hidden + sample) and save score."""
+    """Execute candidate code against ALL (hidden + sample) testcases and save CodingSubmission."""
     submission_id = session.get('submission_id')
     submission = db.session.get(Submission, submission_id)
     if not submission or submission.status != 'in_progress':
@@ -439,7 +436,6 @@ def record_violation():
 def submit():
     submission_id = session['submission_id']
     
-    # 1 single SQL query with joinedload for submission + assessment + answers
     submission = (
         db.session.query(Submission)
         .options(
@@ -464,36 +460,51 @@ def submit():
         # Already submitted
         return redirect(url_for('assessment.result', submission_id=submission.id))
 
-    # Fetch cached questions for this assessment
-    questions = _get_cached_questions(submission.assessment_id)
-
-    answer_map = {a.question_id: a.selected_option for a in submission.answers}
-    correct = sum(
-        1 for q in questions
-        if answer_map.get(q.id) == q.correct_answer
-    )
-    total = len(questions)
-    percentage = (correct / total * 100) if total > 0 else 0
+    is_coding_round = (submission.assessment_id == 4 or 'Coding' in (submission.assessment.title or '') or 'Round 2' in (submission.assessment.title or ''))
     pass_pct = submission.assessment.pass_percentage if submission.assessment else 25.0
-    status = 'pass' if percentage >= pass_pct else 'fail'
 
-    # Sum coding score from coding submissions
-    total_coding_pts = db.session.query(func.coalesce(func.sum(CodingSubmission.score), 0)).filter_by(
-        submission_id=submission.id
-    ).scalar() or 0
-    submission.coding_score = total_coding_pts
+    if is_coding_round:
+        # Sum coding score from coding submissions for Round 2
+        total_coding_pts = db.session.query(func.coalesce(func.sum(CodingSubmission.score), 0)).filter_by(
+            submission_id=submission.id
+        ).scalar() or 0
+        
+        max_coding_pts = db.session.query(func.coalesce(func.sum(CodingProblem.points), 0)).filter(
+            db.or_(CodingProblem.assessment_id == submission.assessment_id, CodingProblem.assessment_id.is_(None))
+        ).scalar() or 200
+        
+        coding_problems_count = db.session.query(func.count(CodingProblem.id)).filter(
+            db.or_(CodingProblem.assessment_id == submission.assessment_id, CodingProblem.assessment_id.is_(None))
+        ).scalar() or 2
 
-    # Total score and combined percentage
-    # (assuming 15 MCQs = 150 pts + 2 Coding Problems = 200 pts => 350 pts total)
-    max_pts = (total * 10) + 200 if total > 0 else 350
-    earned_pts = (correct * 10) + total_coding_pts
-    percentage = (earned_pts / max_pts * 100) if max_pts > 0 else 0
+        percentage = round((total_coding_pts / max_coding_pts * 100), 2) if max_coding_pts > 0 else 0.0
+        status = 'pass' if percentage >= pass_pct else 'fail'
 
-    submission.score = correct
-    submission.total_questions = total
-    submission.percentage = percentage
-    submission.status = status
-    submission.submitted_at = datetime.utcnow()
+        submission.score = total_coding_pts
+        submission.coding_score = total_coding_pts
+        submission.total_questions = coding_problems_count
+        submission.percentage = percentage
+        submission.status = status
+        submission.submitted_at = datetime.utcnow()
+    else:
+        # Round 1: Online MCQ Assessment ONLY
+        questions = _get_cached_questions(submission.assessment_id)
+        answer_map = {a.question_id: a.selected_option for a in submission.answers}
+        correct = sum(
+            1 for q in questions
+            if answer_map.get(q.id) == q.correct_answer
+        )
+        total = len(questions)
+        percentage = round((correct / total * 100), 2) if total > 0 else 0.0
+        status = 'pass' if percentage >= pass_pct else 'fail'
+
+        submission.score = correct
+        submission.coding_score = 0
+        submission.total_questions = total
+        submission.percentage = percentage
+        submission.status = status
+        submission.submitted_at = datetime.utcnow()
+
     db.session.commit()
 
     # Clear assessment session keys
@@ -528,7 +539,8 @@ def result(submission_id):
             flash('Unauthorized access.', 'danger')
             return redirect(url_for('candidate.register'))
 
-    questions = _get_cached_questions(submission.assessment_id)
+    is_coding_round = (submission.assessment_id == 4 or 'Coding' in (submission.assessment.title or '') or 'Round 2' in (submission.assessment.title or ''))
+    questions = _get_cached_questions(submission.assessment_id) if not is_coding_round else []
     answers = {a.question_id: a.selected_option for a in submission.answers}
 
     wrong = sum(
@@ -544,4 +556,5 @@ def result(submission_id):
         assessment=submission.assessment,
         wrong=wrong,
         unanswered=unanswered,
+        is_coding_round=is_coding_round,
     )

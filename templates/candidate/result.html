@@ -68,8 +68,13 @@
             class="ring-progress"
           />
           <!-- Inner text -->
+          {% if is_coding_round %}
+          <text x="90" y="74" text-anchor="middle" fill="#0f172a" font-size="36" font-weight="800" font-family="Inter,sans-serif">{{ submission.coding_score or submission.score }}</text>
+          <text x="90" y="96" text-anchor="middle" fill="#64748b" font-size="12" font-weight="600" font-family="Inter,sans-serif">Coding Points</text>
+          {% else %}
           <text x="90" y="74" text-anchor="middle" fill="#0f172a" font-size="38" font-weight="800" font-family="Inter,sans-serif">{{ submission.score }}</text>
           <text x="90" y="96" text-anchor="middle" fill="#64748b" font-size="13" font-weight="600" font-family="Inter,sans-serif">out of {{ submission.total_questions }}</text>
+          {% endif %}
           <text x="90" y="120" text-anchor="middle" fill="{% if submission.status == 'pass' %}#047857{% else %}#ef4444{% endif %}" font-size="18" font-weight="800" font-family="Inter,sans-serif">{{ pct }}%</text>
         </svg>
 
@@ -85,21 +90,29 @@
 
       <!-- Stats Breakdown -->
       <div class="result-stats" style="grid-template-columns: repeat(auto-fit, minmax(110px, 1fr));">
+        {% if is_coding_round %}
+        <div class="rs-item" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
+          <span class="rs-icon" style="color: #a78bfa;">💻</span>
+          <span class="rs-value" style="color: #a78bfa;">{{ submission.coding_score or 0 }}</span>
+          <span class="rs-label" style="color: #a78bfa;">Coding Score</span>
+        </div>
+        <div class="rs-item rs-correct">
+          <span class="rs-icon">⚡</span>
+          <span class="rs-value">{{ submission.total_questions }}</span>
+          <span class="rs-label">Challenges</span>
+        </div>
+        {% else %}
         <div class="rs-item rs-correct">
           <span class="rs-icon">📝</span>
           <span class="rs-value">{{ submission.score }}</span>
           <span class="rs-label">MCQs Correct</span>
-        </div>
-        <div class="rs-item" style="background: rgba(139, 92, 246, 0.08); border-color: rgba(139, 92, 246, 0.25);">
-          <span class="rs-icon" style="color: #a78bfa;">💻</span>
-          <span class="rs-value" style="color: #a78bfa;">{{ submission.coding_score or 0 }}</span>
-          <span class="rs-label" style="color: #a78bfa;">Coding Pts</span>
         </div>
         <div class="rs-item rs-wrong">
           <span class="rs-icon">✕</span>
           <span class="rs-value">{{ wrong }}</span>
           <span class="rs-label">MCQs Wrong</span>
         </div>
+        {% endif %}
         <div class="rs-item rs-vio">
           <span class="rs-icon">⚠</span>
           <span class="rs-value">{{ submission.violations }}</span>
@@ -110,9 +123,9 @@
       <!-- Pass threshold & score summary -->
       <div class="pass-info" style="display:flex; flex-direction:column; gap:6px; align-items:center; text-align:center; padding:16px;">
         <div style="display:flex; align-items:center; gap:16px; flex-wrap:wrap; justify-content:center;">
-          <span>Pass Threshold: <strong>{{ assessment.pass_percentage }}%</strong></span>
+          <span>Pass Cutoff: <strong>{{ assessment.pass_percentage }}%</strong></span>
           <span style="color:var(--text-faint);">•</span>
-          <span>Your Score: <strong>{{ "%.2f"|format(submission.percentage) }}%</strong></span>
+          <span>Your Performance: <strong>{{ "%.2f"|format(submission.percentage) }}%</strong></span>
         </div>
         {% if submission.submitted_at_ist %}
         <div style="font-size:12px; color:var(--text-muted);">
@@ -123,19 +136,35 @@
 
       <div class="result-footer-msg">
         {% if submission.status == 'pass' %}
-        <p class="rf-pass">🎉 Congratulations! You have successfully cleared this assessment. The recruitment team will contact you for the next steps.</p>
+          {% if is_coding_round %}
+          <p class="rf-pass">🎉 Congratulations! You have successfully completed and cleared Round 2 (Technical Live Coding). Our recruitment panel will review your code submissions and reach out for final technical interviews.</p>
+          {% else %}
+          <p class="rf-pass">🎉 Congratulations! You have cleared Round 1 (Online MCQ Assessment). You are now eligible to take Round 2 (Technical Live Coding Sandbox).</p>
+          {% endif %}
         {% else %}
-        <p class="rf-fail">Thank you for participating. Unfortunately, you did not meet the passing criteria. We appreciate your effort and wish you the best.</p>
+        <p class="rf-fail">Thank you for participating in this campus drive. Unfortunately, your score did not meet the qualifying threshold for this stage.</p>
         {% endif %}
         <p class="rf-brand">ElevateIQ Campus Recruitment Platform</p>
         
-        <div style="margin-top: var(--space-5);">
-          <form method="POST" action="{{ url_for('candidate.logout') }}">
+        <div style="margin-top: 24px; display: flex; flex-direction: column; gap: 10px; align-items: center;">
+          {% if not is_coding_round and submission.status == 'pass' %}
+          <a href="{{ url_for('candidate.dashboard') }}" class="btn" style="background: linear-gradient(135deg, #7c3aed, #6d28d9); color: #fff; padding: 12px 28px; border-radius: 10px; text-decoration: none; font-weight: 700; display: inline-flex; align-items: center; gap: 8px;">
+            Proceed to Round 2 (Live Coding) →
+          </a>
+          {% else %}
+          <a href="{{ url_for('candidate.dashboard') }}" class="btn" style="background: linear-gradient(135deg, #2563eb, #1d4ed8); color: #fff; padding: 10px 24px; border-radius: 8px; text-decoration: none; font-weight: 600;">
+            ← Return to Candidate Dashboard
+          </a>
+          {% endif %}
+          <form method="POST" action="{{ url_for('candidate.logout') }}" style="margin: 0;">
             <input type="hidden" name="csrf_token" value="{{ csrf_token() }}" />
-            <button type="submit" class="btn btn-ghost" style="padding: 8px 24px; cursor: pointer;">Sign Out / Exit Portal</button>
+            <button type="submit" class="btn btn-ghost" style="padding: 6px 18px; font-size: 12px; color: #94a3b8; cursor: pointer; border: none; background: transparent;">Log Out / Exit</button>
           </form>
         </div>
       </div>
+    </div>
+  </div>
+</div>
     </div>
   </div>
 </div>
